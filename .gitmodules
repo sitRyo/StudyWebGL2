@@ -1,0 +1,3 @@
+[submodule "src/webgl2Libs"]
+	path = src/webgl2Libs
+	url = https://github.com/PacktPublishing/Real-Time-3D-Graphics-with-WebGL-2.git
