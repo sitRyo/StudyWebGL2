@@ -3,7 +3,7 @@ var path = require('path');
 module.exports = {
   // productionで最適化されたjsが出力される
   mode: 'development',
-  entry: './src/App.ts',
+  entry: './src/App.js',
   
   // webpack-dev-serverの設定
   devServer: {
