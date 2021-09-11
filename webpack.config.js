@@ -15,6 +15,9 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, 'template/index.html'),
+      inject: 'body',
+      hash: 'true',
       title: 'Study of WebGL2',
     }),
   ],
