@@ -10,6 +10,11 @@ class utils {
 
     return canvas;
   }
+
+  getGLContext = (canvas: HTMLCanvasElement): WebGL2RenderingContext | null => {
+    const r = canvas.getContext('webgl2');
+    return r ? r : null;
+  }
 }
 
 export default utils;
