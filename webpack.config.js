@@ -1,34 +1,38 @@
-var path = require('path');
+const path = require('path');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
-  // productionで最適化されたjsが出力される
   mode: 'development',
-  entry: './src/App.js',
-  
-  // webpack-dev-serverの設定
-  devServer: {
-    static: {
-      directory: path.join(__dirname, 'dist'),
-    },
-    open: true,
+  entry: {
+    index: './src/index.ts',
   },
-
+  devtool: 'inline-source-map',
+  devServer: {
+    static: './dist',
+  },
+  optimization: {
+    runtimeChunk: 'single'
+  },
+  plugins: [
+    new HtmlWebpackPlugin({
+      title: 'Study of WebGL2',
+    }),
+  ],
+  output: {
+    filename: '[name].bundle.js',
+    path: path.resolve(__dirname, 'dist'),
+    clean: true,
+  },
   module: {
     rules: [
       {
-        // 拡張子 .ts の場合
-        // TypeScript をコンパイルする
-        test: /\.ts$/,
-        use: 'ts-loader',
+        test: /\.css$/i,
+        use: ['style-loader', 'css-loader'],
       },
-    ],
-  },
-  
-  // import 文で .ts ファイルを解決するため
-  // これを定義しないと import 文で拡張子を書く必要が生まれる。
-  resolve: {
-    extensions: [
-      '.ts', '.js',
+      {
+        test: /\.ts$/i,
+        use: ['ts-loader'],
+      }
     ],
   },
 };
