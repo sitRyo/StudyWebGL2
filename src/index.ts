@@ -1,8 +1,12 @@
 import './lib/normalize.css'
 import utils from './utils/utils'
+import src from './shaders/vertexShader.vert';
 
 const Utils = new utils();
-let gl: WebGL2RenderingContext;
+let gl: WebGL2RenderingContext = null;
+let squareVertexBuffer: WebGLBuffer | null = null; 
+let squareIndexBuffer: WebGLBuffer | null = null;
+let indices: number[]; 
 
 const initBuffers = (): void => {
   console.log('initBuffers');
@@ -14,21 +18,25 @@ const initBuffers = (): void => {
   ];
 
   // 反時計周りで定義されたインデックス
-  const indices = [0, 1, 2, 0, 2, 3];
+  indices = [0, 1, 2, 0, 2, 3];
 
   // VBOの準備
-  const squareVertexBuffer = gl.createBuffer();
+  squareVertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
   // IBOの準備
-  const squareIndexBuffer = gl.createBuffer();
+  squareIndexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, squareIndexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
   // クリア
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+}
+
+const readRawString = (): void => {
+
 }
 
 const init = (): void => {
@@ -40,6 +48,8 @@ const init = (): void => {
   if (!gl) {
     console.error('WebGL2 is not available in your browser.');
   }
+
+  console.log(src);
 
   initBuffers();
 }
