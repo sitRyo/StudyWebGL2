@@ -116,9 +116,9 @@ const init = (): void => {
 
   gl.clearColor(0, 0, 0, 1);
 
-  initProgram();
-  initBuffers();
-  draw();
+  initProgram(); // シェーダコンパイル
+  initBuffers(); // VBO, IBO作成
+  draw(); // 描画
 }
 
 // html実行時にinitを実行する
