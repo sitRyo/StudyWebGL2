@@ -20,6 +20,7 @@
     "webpack-dev-server": "^4.1.0"
   },
   "dependencies": {
+    "@types/webgl2": "^0.0.6",
     "lodash": "^4.17.21",
     "raw-loader": "^4.0.2"
   }
