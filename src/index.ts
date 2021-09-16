@@ -5,7 +5,7 @@ import fragShader from './shaders/fragmentShader.frag';
 
 const Utils = new utils();
 let gl: WebGL2RenderingContext = null;
-let squareVertexBuffer: WebGLBuffer | null = null; 
+let squareVAO: WebGLVertexArrayObject | null = null;
 let squareIndexBuffer: WebGLBuffer | null = null;
 let indices: number[]; 
 let program: WebGLProgram | null;
@@ -22,12 +22,21 @@ const initBuffers = (): void => {
   ];
 
   // 反時計周りで定義されたインデックス
-  indices = [0, 1, 2, 0, 2, 3, 0, 3, 4];
+  indices = [0, 1, 2, 0, 2, 3];
 
-  // VBOの準備
-  squareVertexBuffer = gl.createBuffer();
+  // VAOインスタンスを作成
+  squareVAO = gl.createVertexArray();
+
+  // バインドしてそのうえで処理
+  gl.bindVertexArray(squareVAO);
+
+  const squareVertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+  // draw内で後ほどデータを使用するためにVAOの命令を実行する
+  gl.enableVertexAttribArray(attLocation['aVertexPosition']);
+  gl.vertexAttribPointer(program['aVertexPosition'], 3, gl.FLOAT, false, 0, 0);
 
   // IBOの準備
   squareIndexBuffer = gl.createBuffer();
@@ -35,6 +44,7 @@ const initBuffers = (): void => {
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
   // クリア
+  gl.bindVertexArray(null);
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
 }
@@ -62,10 +72,8 @@ const draw = (): void => {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-  // 作成したバッファを使用
-  gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexBuffer);
-  gl.vertexAttribPointer(attLocation['aVertexPosition'], 3, gl.FLOAT, false, 0, 0); // VBOと頂点シェーダのアトリビュートを紐づける
-  gl.enableVertexAttribArray(attLocation['aVertexPosition']); // 紐づけたアトリビュートの有効か
+  // VAOをバインド
+  gl.bindVertexArray(squareVAO);
 
   // IBOをバインド
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, squareIndexBuffer)
@@ -74,6 +82,7 @@ const draw = (): void => {
   gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
 
   // クリア
+  gl.bindVertexArray(null);
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
 }
