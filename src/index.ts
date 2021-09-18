@@ -5,42 +5,42 @@ import fragShader from './shaders/fragmentShader.frag';
 
 const Utils = new utils();
 let gl: WebGL2RenderingContext = null;
-let squareVAO: WebGLVertexArrayObject | null = null;
-let squareIndexBuffer: WebGLBuffer | null = null;
+let trapezoidVAO: WebGLVertexArrayObject | null = null;
+let trapezoidIndexBuffer: WebGLBuffer | null = null;
 let indices: number[]; 
 let program: WebGLProgram | null;
+let renderingMode = 'TRIANGLES'
 const attLocation: { [key: string]: GLint } = {}; // programオブジェクト内のシェーダへのインデックスを格納する
 
 const initBuffers = (): void => {
-  console.log('initBuffers');
   const vertices = [
-    -0.5, 0.5, 0,
     -0.5, -0.5, 0,
-    0.5, -0.5, 0,
-    0.5, 0.5, 0,
-    0, 1, 0,
+    -0.25, 0.5, 0,
+    0.0, -0.5, 0,
+    0.25, 0.5, 0,
+    0.5, -0.5, 0
   ];
 
   // 反時計周りで定義されたインデックス
-  indices = [0, 1, 2, 0, 2, 3];
+  indices = [0, 1, 2, 0, 2, 3, 2, 3, 4];
 
   // VAOインスタンスを作成
-  squareVAO = gl.createVertexArray();
+  trapezoidVAO = gl.createVertexArray();
 
   // バインドしてそのうえで処理
-  gl.bindVertexArray(squareVAO);
+  gl.bindVertexArray(trapezoidVAO);
 
-  const squareVertexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexBuffer);
+  const trapezoidVertexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, trapezoidVertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
-  // draw内で後ほどデータを使用するためにVAOの命令を実行する
-  gl.enableVertexAttribArray(attLocation['aVertexPosition']);
+  // VAOの命令を実行する
   gl.vertexAttribPointer(program['aVertexPosition'], 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(attLocation['aVertexPosition']);
 
   // IBOの準備
-  squareIndexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, squareIndexBuffer);
+  trapezoidIndexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, trapezoidIndexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
   // クリア
@@ -73,18 +73,56 @@ const draw = (): void => {
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
   // VAOをバインド
-  gl.bindVertexArray(squareVAO);
+  gl.bindVertexArray(trapezoidVAO);
 
-  // IBOをバインド
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, squareIndexBuffer)
-
-  // トライアングルプリミティブを用いてシーンを描画
-  gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+  // レンダリングモードに応じて、異なる設定で描画する
+  switch (renderingMode) {
+    case 'TRIANGLES': {
+      indices = [0, 1, 2, 2, 3, 4, 1, 2, 3];
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+      gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+      break;
+    }
+    case 'LINES': {
+      indices = [0, 1, 1, 2, 2, 3, 3, 4];
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+      gl.drawElements(gl.LINES, indices.length, gl.UNSIGNED_SHORT, 0);
+      break;
+    }
+    case 'POINTS': {
+      indices = [1, 2, 3];
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+      gl.drawElements(gl.POINTS, indices.length, gl.UNSIGNED_SHORT, 0);
+      break;
+    }
+    case 'LINE_LOOP': {
+      indices = [2, 4, 3, 1, 0];
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+      gl.drawElements(gl.LINE_LOOP, indices.length, gl.UNSIGNED_SHORT, 0);
+      break;
+    }
+    case 'LINE_STRIP': {
+      indices = [2, 3, 4, 1, 0];
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+      gl.drawElements(gl.LINE_STRIP, indices.length, gl.UNSIGNED_SHORT, 0);
+      break;
+    }
+    case 'TRIANGLE_STRIP': {
+      indices = [0, 1, 2, 3, 4];
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+      gl.drawElements(gl.TRIANGLE_STRIP, indices.length, gl.UNSIGNED_SHORT, 0);
+      break;
+    }
+    case 'TRIANGLE_FAN': {
+      indices = [0, 1, 2, 3, 4];
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+      gl.drawElements(gl.TRIANGLE_FAN, indices.length, gl.UNSIGNED_SHORT, 0);
+      break;
+    }
+  }
 
   // クリア
   gl.bindVertexArray(null);
-  gl.bindBuffer(gl.ARRAY_BUFFER, null);
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
 }
 
 const initProgram = (): void => {
@@ -111,6 +149,11 @@ const initProgram = (): void => {
   attLocation['aVertexPosition'] = gl.getAttribLocation(program, 'aVertexPosition');
 }
 
+function render() {
+  window.requestAnimationFrame(render); // ブラウザにアニメーションを行わせる
+  draw();
+}
+
 const init = (): void => {
   // htmlのcanvasを追加
   const canvas = Utils.getCanvas('webgl-canvas');
@@ -119,15 +162,37 @@ const init = (): void => {
 
   // webgl2のコンテキストを取得
   gl = Utils.getGLContext(canvas);
-  if (!gl) {
-    console.error('WebGL2 is not available in your browser.');
-  }
-
   gl.clearColor(0, 0, 0, 1);
 
+  // デプステスト？
+  // 深度に合わせてオブジェクトが描画されるようになる
+  gl.enable(gl.DEPTH_TEST); 
+
   initProgram(); // シェーダコンパイル
-  initBuffers(); // VBO, IBO作成
-  draw(); // 描画
+  initBuffers(); // VAO, IBO作成
+  render(); // 描画
+
+  initControls(); // gui
+}
+
+const initControls = () => {
+  // dat.GUIのインターフェースをラップするシンプルなAPI
+  // この本のために作られたらしい
+  Utils.configureControls({
+    'Rendering Mode': {
+      value: renderingMode,
+      options: [
+        'TRIANGLES',
+        'LINES',
+        'POINTS',
+        'LINE_LOOP',
+        'LINE_STRIP',
+        'TRIANGLE_STRIP',
+        'TRIANGLE_FAN'
+      ],
+      onChange: v => renderingMode = v
+    }
+  })
 }
 
 // html実行時にinitを実行する
