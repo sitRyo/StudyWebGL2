@@ -1,8 +1,8 @@
-import './lib/normalize.css'
-import utils from './utils/utils'
-import vertShader from './shaders/vertexShader.vert';
-import fragShader from './shaders/fragmentShader.frag';
-import { isGLint } from './lib/typeGuards';
+import './common/lib/normalize.css'
+import utils from './common/utils/utils'
+import vertShader from './common/shaders/vertexShader.vert';
+import fragShader from './common/shaders/fragmentShader.frag';
+import { isGLint } from './common/lib/typeGuards';
 import { mat4 } from 'gl-matrix';
 
 const Utils = new utils();
