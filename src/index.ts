@@ -2,46 +2,99 @@ import './lib/normalize.css'
 import utils from './utils/utils'
 import vertShader from './shaders/vertexShader.vert';
 import fragShader from './shaders/fragmentShader.frag';
+import { isGLint } from './lib/typeGuards';
+import { mat4 } from 'gl-matrix';
 
 const Utils = new utils();
 let gl: WebGL2RenderingContext = null;
-let trapezoidVAO: WebGLVertexArrayObject | null = null;
-let trapezoidIndexBuffer: WebGLBuffer | null = null;
+let coneVAO: WebGLVertexArrayObject | null = null;
+let coneIndexBuffer: WebGLBuffer | null = null;
 let indices: number[]; 
 let program: WebGLProgram | null;
-let renderingMode = 'TRIANGLES'
-const attLocation: { [key: string]: GLint } = {}; // programオブジェクト内のシェーダへのインデックスを格納する
+let vboName: string;
+let iboName: string;
+let vboSize, vboUsage, iboSize, iboUsage: any; // webgl2がanyを返してくるのでしょうがない
+let isVerticesVbo: boolean;
+let isConeVertexBufferVbo: boolean;
+let projectionMatrix = mat4.create();
+let modelViewMatrix = mat4.create();
+const attLocation: { [key: string]: GLint | WebGLUniformLocation | null } = {}; // programオブジェクト内のシェーダへのインデックスを格納する
 
 const initBuffers = (): void => {
   const vertices = [
-    -0.5, -0.5, 0,
-    -0.25, 0.5, 0,
-    0.0, -0.5, 0,
-    0.25, 0.5, 0,
-    0.5, -0.5, 0
+    1.5, 0, 0,
+    -1.5, 1, 0,
+    -1.5, 0.809017, 0.587785,
+    -1.5, 0.309017, 0.951057,
+    -1.5, -0.309017, 0.951057,
+    -1.5, -0.809017, 0.587785,
+    -1.5, -1, 0,
+    -1.5, -0.809017, -0.587785,
+    -1.5, -0.309017, -0.951057,
+    -1.5, 0.309017, -0.951057,
+    -1.5, 0.809017, -0.587785
   ];
 
   // 反時計周りで定義されたインデックス
-  indices = [0, 1, 2, 0, 2, 3, 2, 3, 4];
+  indices = [
+    0, 1, 2,
+    0, 2, 3,
+    0, 3, 4,
+    0, 4, 5,
+    0, 5, 6,
+    0, 6, 7,
+    0, 7, 8,
+    0, 8, 9,
+    0, 9, 10,
+    0, 10, 1
+  ];
 
   // VAOインスタンスを作成
-  trapezoidVAO = gl.createVertexArray();
+  coneVAO = gl.createVertexArray();
 
   // バインドしてそのうえで処理
-  gl.bindVertexArray(trapezoidVAO);
+  gl.bindVertexArray(coneVAO);
 
-  const trapezoidVertexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, trapezoidVertexBuffer);
+  const coneVertexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, coneVertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
   // VAOの命令を実行する
   gl.vertexAttribPointer(program['aVertexPosition'], 3, gl.FLOAT, false, 0, 0);
-  gl.enableVertexAttribArray(attLocation['aVertexPosition']);
+  if (isGLint(attLocation['aVertexPosition'])) {
+    gl.enableVertexAttribArray(attLocation['aVertexPosition']);
+  }
 
   // IBOの準備
-  trapezoidIndexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, trapezoidIndexBuffer);
+  coneIndexBuffer = gl.createBuffer();
+  // gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, coneIndexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+  // パラメータの型に基づいてグローバル変数を設定
+  if (coneVertexBuffer === gl.getParameter(gl.ARRAY_BUFFER_BINDING)) {
+    vboName = 'coneVertexBuffer';
+  }
+
+  if (coneIndexBuffer === gl.getParameter(gl.ELEMENT_ARRAY_BUFFER_BINDING)) {
+    iboName = 'coneIndexBuffer';
+  }
+
+  // 頂点オブジェクトとインデックスオブジェクトの情報を取得
+  vboSize = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
+  vboUsage = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_USAGE);
+
+  iboSize = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_SIZE);
+  iboUsage = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_USAGE);
+
+  try {
+    isVerticesVbo = gl.isBuffer(vertices);
+  }
+  catch (e) {
+    isVerticesVbo = false;
+  }
+
+  isConeVertexBufferVbo = gl.isBuffer(coneVertexBuffer);
 
   // クリア
   gl.bindVertexArray(null);
@@ -72,54 +125,18 @@ const draw = (): void => {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-  // VAOをバインド
-  gl.bindVertexArray(trapezoidVAO);
+  mat4.perspective(projectionMatrix, 45, gl.canvas.width / gl.canvas.height, 0.1, 10000);
+  mat4.identity(modelViewMatrix);
+  mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -5]);
 
-  // レンダリングモードに応じて、異なる設定で描画する
-  switch (renderingMode) {
-    case 'TRIANGLES': {
-      indices = [0, 1, 2, 2, 3, 4, 1, 2, 3];
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-      gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
-      break;
-    }
-    case 'LINES': {
-      indices = [0, 1, 1, 2, 2, 3, 3, 4];
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-      gl.drawElements(gl.LINES, indices.length, gl.UNSIGNED_SHORT, 0);
-      break;
-    }
-    case 'POINTS': {
-      indices = [1, 2, 3];
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-      gl.drawElements(gl.POINTS, indices.length, gl.UNSIGNED_SHORT, 0);
-      break;
-    }
-    case 'LINE_LOOP': {
-      indices = [2, 4, 3, 1, 0];
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-      gl.drawElements(gl.LINE_LOOP, indices.length, gl.UNSIGNED_SHORT, 0);
-      break;
-    }
-    case 'LINE_STRIP': {
-      indices = [2, 3, 4, 1, 0];
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-      gl.drawElements(gl.LINE_STRIP, indices.length, gl.UNSIGNED_SHORT, 0);
-      break;
-    }
-    case 'TRIANGLE_STRIP': {
-      indices = [0, 1, 2, 3, 4];
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-      gl.drawElements(gl.TRIANGLE_STRIP, indices.length, gl.UNSIGNED_SHORT, 0);
-      break;
-    }
-    case 'TRIANGLE_FAN': {
-      indices = [0, 1, 2, 3, 4];
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-      gl.drawElements(gl.TRIANGLE_FAN, indices.length, gl.UNSIGNED_SHORT, 0);
-      break;
-    }
-  }
+  gl.uniformMatrix4fv(attLocation['uProjectionMatrix'], false, projectionMatrix);
+  gl.uniformMatrix4fv(attLocation['uModelViewMatrix'], false, modelViewMatrix);
+
+  // VAOをバインド
+  gl.bindVertexArray(coneVAO);
+
+  // Draw
+  gl.drawElements(gl.LINE_LOOP, indices.length, gl.UNSIGNED_SHORT, 0);
 
   // クリア
   gl.bindVertexArray(null);
@@ -147,6 +164,19 @@ const initProgram = (): void => {
   // コード後半で簡単にアクセスできるように
   // シェーダーの値のロケーションをプログラムインスタンスにアタッチする
   attLocation['aVertexPosition'] = gl.getAttribLocation(program, 'aVertexPosition');
+  attLocation['uProjectionMatrix'] = gl.getUniformLocation(program, 'uProjectionMatrix');
+  attLocation['uModelViewMatrix'] = gl.getUniformLocation(program, 'uModelViewMatrix');
+}
+
+const updateInfo = () => {
+  document.getElementById('t-vbo-name').innerText = vboName;
+  document.getElementById('t-ibo-name').innerText = iboName;
+  document.getElementById('t-vbo-size').innerText = vboSize;
+  document.getElementById('t-vbo-usage').innerText = vboUsage;
+  document.getElementById('t-ibo-size').innerText = iboSize;
+  document.getElementById('t-ibo-usage').innerText = iboUsage;
+  document.getElementById('s-is-vertices-vbo').innerText = isVerticesVbo ? 'Yes' : 'No';
+  document.getElementById('s-is-cone-vertex-buffer-vbo').innerText = isConeVertexBufferVbo ? 'Yes' : 'No';
 }
 
 function render() {
@@ -172,27 +202,8 @@ const init = (): void => {
   initBuffers(); // VAO, IBO作成
   render(); // 描画
 
-  initControls(); // gui
-}
-
-const initControls = () => {
-  // dat.GUIのインターフェースをラップするシンプルなAPI
-  // この本のために作られたらしい
-  Utils.configureControls({
-    'Rendering Mode': {
-      value: renderingMode,
-      options: [
-        'TRIANGLES',
-        'LINES',
-        'POINTS',
-        'LINE_LOOP',
-        'LINE_STRIP',
-        'TRIANGLE_STRIP',
-        'TRIANGLE_FAN'
-      ],
-      onChange: v => renderingMode = v
-    }
-  })
+  // レンダリング情報
+  updateInfo();
 }
 
 // html実行時にinitを実行する
