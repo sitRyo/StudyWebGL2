@@ -15,7 +15,9 @@ let vboName: string;
 let iboName: string;
 let vboSize, vboUsage, iboSize, iboUsage: any; // webgl2がanyを返してくるのでしょうがない
 let isVerticesVbo: boolean;
+let isIndicesIbo: boolean;
 let isConeVertexBufferVbo: boolean;
+let isConeIndexBufferIbo: boolean;
 let projectionMatrix = mat4.create();
 let modelViewMatrix = mat4.create();
 const attLocation: { [key: string]: GLint | WebGLUniformLocation | null } = {}; // programオブジェクト内のシェーダへのインデックスを格納する
@@ -67,7 +69,6 @@ const initBuffers = (): void => {
 
   // IBOの準備
   coneIndexBuffer = gl.createBuffer();
-  // gl.bindBuffer(gl.ARRAY_BUFFER, null);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, coneIndexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
@@ -87,6 +88,8 @@ const initBuffers = (): void => {
   iboSize = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_SIZE);
   iboUsage = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_USAGE);
 
+  // vboに紐づけられている頂点配列がwebglバッファか？
+  // 当たり前だが, No
   try {
     isVerticesVbo = gl.isBuffer(vertices);
   }
@@ -94,7 +97,17 @@ const initBuffers = (): void => {
     isVerticesVbo = false;
   }
 
+  // iboに紐づけられているインデックスがwebglバッファか？
+  // こちらも当たり前だが, No
+  try {
+    isIndicesIbo = gl.isBuffer(indices);
+  }
+  catch (e) {
+    isIndicesIbo = false;
+  }
+
   isConeVertexBufferVbo = gl.isBuffer(coneVertexBuffer);
+  isConeIndexBufferIbo = gl.isBuffer(coneIndexBuffer);
 
   // クリア
   gl.bindVertexArray(null);
@@ -176,7 +189,9 @@ const updateInfo = () => {
   document.getElementById('t-ibo-size').innerText = iboSize;
   document.getElementById('t-ibo-usage').innerText = iboUsage;
   document.getElementById('s-is-vertices-vbo').innerText = isVerticesVbo ? 'Yes' : 'No';
+  document.getElementById('s-is-indices-ibo').innerText = isIndicesIbo ? 'Yes' : 'No';
   document.getElementById('s-is-cone-vertex-buffer-vbo').innerText = isConeVertexBufferVbo ? 'Yes' : 'No';
+  document.getElementById('s-is-cone-Index-buffer-ibo').innerText = isConeIndexBufferIbo ? 'Yes' : 'No';
 }
 
 function render() {
