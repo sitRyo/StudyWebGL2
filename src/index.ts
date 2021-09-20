@@ -91,8 +91,8 @@ const initProgram = (): void => {
   // プログラムを作成
   program = gl.createProgram();
   // シェーダーのコンパイル
-  const vertexShader = getShader(vertShader, gl.VERTEX_SHADER);
-  const fragmentShader = getShader(fragShader, gl.FRAGMENT_SHADER);
+  const vertexShader = Utils.getShader(gl, vertShader, gl.VERTEX_SHADER);
+  const fragmentShader = Utils.getShader(gl, fragShader, gl.FRAGMENT_SHADER);
 
   // プログラムにシェーダーをアタッチ
   gl.attachShader(program, vertexShader);
@@ -123,8 +123,7 @@ function render() {
 const init = (): void => {
   // htmlのcanvasを追加
   const canvas = Utils.getCanvas('webgl-canvas');
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  Utils.autoResizeCanvas(canvas);
 
   // webgl2のコンテキストを取得
   gl = Utils.getGLContext(canvas);

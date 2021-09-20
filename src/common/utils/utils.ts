@@ -81,6 +81,33 @@ class utils {
       controller.onChange(v => onChange(v, state))
     });
   }
+
+  autoResizeCanvas = (canvas: HTMLCanvasElement) => {
+    const expandFullScreen = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    // initで呼び出されるときにcanvas幅をウィンドウに合わせる
+    expandFullScreen();
+    // 次回以降はウィンドウ幅が変わる度にcanvas幅が自動で切り替わる
+    window.addEventListener('resize', expandFullScreen);
+  }
+
+  getShader = (gl: WebGL2RenderingContext | null, rawShaderString: string, type: GLenum): WebGLShader | null => {
+    // タイプに応じたシェーダーを代入
+    const shader = gl.createShader(type);
+    // 与えられたシェーダコードを仕様してシェーダーをコンパイル
+    gl.shaderSource(shader, rawShaderString);
+    gl.compileShader(shader);
+
+    // シェーダーに問題がないかを検査する
+    if(!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      console.log(gl.getShaderInfoLog(shader));
+      return null;
+    }
+
+    return shader;
+  }
 }
 
 export default utils;
