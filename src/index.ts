@@ -4,116 +4,19 @@ import vertShader from './common/shaders/vertexShader.vert';
 import fragShader from './common/shaders/fragmentShader.frag';
 import { isGLint } from './common/lib/typeGuards';
 import { mat4 } from 'gl-matrix';
+import { Model } from './common/utils/types';
 
 const Utils = new utils();
 let gl: WebGL2RenderingContext = null;
 let coneVAO: WebGLVertexArrayObject | null = null;
-let coneIndexBuffer: WebGLBuffer | null = null;
-let indices: number[]; 
 let program: WebGLProgram | null;
-let vboName: string;
-let iboName: string;
-let vboSize, vboUsage, iboSize, iboUsage: any; // webgl2がanyを返してくるのでしょうがない
-let isVerticesVbo: boolean;
-let isIndicesIbo: boolean;
-let isConeVertexBufferVbo: boolean;
-let isConeIndexBufferIbo: boolean;
 let projectionMatrix = mat4.create();
 let modelViewMatrix = mat4.create();
+
+let modelIndexBuffer: WebGLBuffer | null = null; // モデルのIBO
+let model: Model; // ジオメトリのデータ
+
 const attLocation: { [key: string]: GLint | WebGLUniformLocation | null } = {}; // programオブジェクト内のシェーダへのインデックスを格納する
-
-const initBuffers = (): void => {
-  const vertices = [
-    1.5, 0, 0,
-    -1.5, 1, 0,
-    -1.5, 0.809017, 0.587785,
-    -1.5, 0.309017, 0.951057,
-    -1.5, -0.309017, 0.951057,
-    -1.5, -0.809017, 0.587785,
-    -1.5, -1, 0,
-    -1.5, -0.809017, -0.587785,
-    -1.5, -0.309017, -0.951057,
-    -1.5, 0.309017, -0.951057,
-    -1.5, 0.809017, -0.587785
-  ];
-
-  // 反時計周りで定義されたインデックス
-  indices = [
-    0, 1, 2,
-    0, 2, 3,
-    0, 3, 4,
-    0, 4, 5,
-    0, 5, 6,
-    0, 6, 7,
-    0, 7, 8,
-    0, 8, 9,
-    0, 9, 10,
-    0, 10, 1
-  ];
-
-  // VAOインスタンスを作成
-  coneVAO = gl.createVertexArray();
-
-  // バインドしてそのうえで処理
-  gl.bindVertexArray(coneVAO);
-
-  const coneVertexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, coneVertexBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-
-  // VAOの命令を実行する
-  gl.vertexAttribPointer(program['aVertexPosition'], 3, gl.FLOAT, false, 0, 0);
-  if (isGLint(attLocation['aVertexPosition'])) {
-    gl.enableVertexAttribArray(attLocation['aVertexPosition']);
-  }
-
-  // IBOの準備
-  coneIndexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, coneIndexBuffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-
-  // パラメータの型に基づいてグローバル変数を設定
-  if (coneVertexBuffer === gl.getParameter(gl.ARRAY_BUFFER_BINDING)) {
-    vboName = 'coneVertexBuffer';
-  }
-
-  if (coneIndexBuffer === gl.getParameter(gl.ELEMENT_ARRAY_BUFFER_BINDING)) {
-    iboName = 'coneIndexBuffer';
-  }
-
-  // 頂点オブジェクトとインデックスオブジェクトの情報を取得
-  vboSize = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
-  vboUsage = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_USAGE);
-
-  iboSize = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_SIZE);
-  iboUsage = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_USAGE);
-
-  // vboに紐づけられている頂点配列がwebglバッファか？
-  // 当たり前だが, No
-  try {
-    isVerticesVbo = gl.isBuffer(vertices);
-  }
-  catch (e) {
-    isVerticesVbo = false;
-  }
-
-  // iboに紐づけられているインデックスがwebglバッファか？
-  // こちらも当たり前だが, No
-  try {
-    isIndicesIbo = gl.isBuffer(indices);
-  }
-  catch (e) {
-    isIndicesIbo = false;
-  }
-
-  isConeVertexBufferVbo = gl.isBuffer(coneVertexBuffer);
-  isConeIndexBufferIbo = gl.isBuffer(coneIndexBuffer);
-
-  // クリア
-  gl.bindVertexArray(null);
-  gl.bindBuffer(gl.ARRAY_BUFFER, null);
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-}
 
 // 文字列をシェーダーとしてコンパイルして返す
 // シェーダー文字列とタイプ（頂点シェーダやフラグメントシェーダ）を指定
@@ -149,10 +52,39 @@ const draw = (): void => {
   gl.bindVertexArray(coneVAO);
 
   // Draw
-  gl.drawElements(gl.LINE_LOOP, indices.length, gl.UNSIGNED_SHORT, 0);
+  gl.drawElements(gl.TRIANGLES, model.indices.length, gl.UNSIGNED_SHORT, 0);
 
   // クリア
   gl.bindVertexArray(null);
+}
+
+const load = (filePath: string) => {
+  return fetch(filePath)
+    .then((res: Response) => res.json())
+    .then((data: Model) => {
+      model = data;
+      coneVAO = gl.createVertexArray();
+      gl.bindVertexArray(coneVAO);
+      gl.uniform3fv(attLocation['uModelColor'], model.color);
+      
+      const modelVertexBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, modelVertexBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(model.vertices), gl.STATIC_DRAW);
+
+      // vaoへ命令
+      if (isGLint(attLocation['aVertexPosition'])) {
+        gl.enableVertexAttribArray(attLocation['aVertexPosition']);
+        gl.vertexAttribPointer(attLocation['aVertexPosition'], 3, gl.FLOAT, false, 0, 0);
+      }
+
+      modelIndexBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, modelIndexBuffer);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(model.indices), gl.STATIC_DRAW);
+
+      gl.bindVertexArray(null);
+    })
+    // コンソールにエラーを出力
+    .catch(console.error);
 }
 
 const initProgram = (): void => {
@@ -179,23 +111,12 @@ const initProgram = (): void => {
   attLocation['aVertexPosition'] = gl.getAttribLocation(program, 'aVertexPosition');
   attLocation['uProjectionMatrix'] = gl.getUniformLocation(program, 'uProjectionMatrix');
   attLocation['uModelViewMatrix'] = gl.getUniformLocation(program, 'uModelViewMatrix');
-}
-
-const updateInfo = () => {
-  document.getElementById('t-vbo-name').innerText = vboName;
-  document.getElementById('t-ibo-name').innerText = iboName;
-  document.getElementById('t-vbo-size').innerText = vboSize;
-  document.getElementById('t-vbo-usage').innerText = vboUsage;
-  document.getElementById('t-ibo-size').innerText = iboSize;
-  document.getElementById('t-ibo-usage').innerText = iboUsage;
-  document.getElementById('s-is-vertices-vbo').innerText = isVerticesVbo ? 'Yes' : 'No';
-  document.getElementById('s-is-indices-ibo').innerText = isIndicesIbo ? 'Yes' : 'No';
-  document.getElementById('s-is-cone-vertex-buffer-vbo').innerText = isConeVertexBufferVbo ? 'Yes' : 'No';
-  document.getElementById('s-is-cone-Index-buffer-ibo').innerText = isConeIndexBufferIbo ? 'Yes' : 'No';
+  // フラグメントシェーダで使う色情報
+  attLocation['uModelColor'] = gl.getUniformLocation(program, 'uModelColor');
 }
 
 function render() {
-  window.requestAnimationFrame(render); // ブラウザにアニメーションを行わせる
+  // window.requestAnimationFrame(render); // ブラウザにアニメーションを行わせる
   draw();
 }
 
@@ -213,12 +134,9 @@ const init = (): void => {
   // 深度に合わせてオブジェクトが描画されるようになる
   gl.enable(gl.DEPTH_TEST); 
 
-  initProgram(); // シェーダコンパイル
-  initBuffers(); // VAO, IBO作成
-  render(); // 描画
-
-  // レンダリング情報
-  updateInfo();
+  initProgram(); // シェーダコンパイルo
+  load('/common/models/geometries/cone1.json')
+  .then(render);
 }
 
 // html実行時にinitを実行する
