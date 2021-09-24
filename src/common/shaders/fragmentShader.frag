@@ -1,11 +1,12 @@
 #version 300 es
 precision mediump float;
 
-uniform vec3 uModelColor;
+// 頂点シェーダーから補完された値を受け取る
+in vec4 vVertexColor;
 
-// シェーダーから得られる色
+// 最終的な色はfragColorとして返す
 out vec4 fragColor;
 
 void main(void) {
-  fragColor = vec4(uModelColor, 1.0);
+  fragColor = vVertexColor;
 }
