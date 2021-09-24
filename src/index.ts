@@ -4,97 +4,81 @@ import vertShader from './common/shaders/vertexShader.vert';
 import fragShader from './common/shaders/fragmentShader.frag';
 import { isGLint } from './common/lib/typeGuards';
 import { mat4 } from 'gl-matrix';
-import { Model } from './common/utils/types';
+import { AttributeKind, Model } from './common/utils/types';
+import { vertices, indices } from './info'; // ch03で使用する頂点とインデックス情報
+import { AttLocation } from './common/utils/types';
 
 const Utils = new utils();
 let gl: WebGL2RenderingContext = null;
-let coneVAO: WebGLVertexArrayObject | null = null;
+let sphereVAO: WebGLVertexArrayObject | null = null;
+let sphereIndicesBuffer: WebGLBuffer | null = null;
+let lightDiffuseColor = [1, 1, 1];
+let lightDirection = [0, -1, -1];
+let sphereColor = [0.5, 0.8, 0.1];
 let program: WebGLProgram | null;
 let projectionMatrix = mat4.create();
 let modelViewMatrix = mat4.create();
+let normalMatrix = mat4.create();
 
 let modelIndexBuffer: WebGLBuffer | null = null; // モデルのIBO
 let model: Model; // ジオメトリのデータ
 
-const attLocation: { [key: string]: GLint | WebGLUniformLocation | null } = {}; // programオブジェクト内のシェーダへのインデックスを格納する
-
-// 文字列をシェーダーとしてコンパイルして返す
-// シェーダー文字列とタイプ（頂点シェーダやフラグメントシェーダ）を指定
-const getShader = (rawShaderString: string, type: GLenum): WebGLShader | null => {
-  // タイプに応じたシェーダーを代入
-  const shader = gl.createShader(type);
-  // 与えられたシェーダコードを仕様してシェーダーをコンパイル
-  gl.shaderSource(shader, rawShaderString);
-  gl.compileShader(shader);
-
-  // シェーダーに問題がないかを検査する
-  if(!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    console.log(gl.getShaderInfoLog(shader));
-    return null;
-  }
-
-  return shader;
-}
+// programオブジェクト内のシェーダへのインデックスを格納する
+const attLocation: AttLocation = {}; 
 
 const draw = (): void => {
   // シーンのクリア
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   mat4.perspective(projectionMatrix, 45, gl.canvas.width / gl.canvas.height, 0.1, 10000);
   mat4.identity(modelViewMatrix);
-  mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -5]);
+  mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -1.5]);
 
-  gl.uniformMatrix4fv(attLocation['uProjectionMatrix'], false, projectionMatrix);
-  gl.uniformMatrix4fv(attLocation['uModelViewMatrix'], false, modelViewMatrix);
+  mat4.copy(normalMatrix, modelViewMatrix);
+  mat4.invert(normalMatrix, normalMatrix);
+  mat4.transpose(normalMatrix, normalMatrix);
 
-  // VAOをバインド
-  gl.bindVertexArray(coneVAO);
+  gl.uniformMatrix4fv(attLocation.uModelViewMatrix, false, modelViewMatrix);
+  gl.uniformMatrix4fv(attLocation.uProjectionMatrix, false, projectionMatrix);
+  gl.uniformMatrix4fv(attLocation.uNormalMatrix, false, normalMatrix);
 
-  // Draw
-  gl.drawElements(gl.TRIANGLES, model.indices.length, gl.UNSIGNED_SHORT, 0);
+  try {
+    // Bind
+    gl.bindVertexArray(sphereVAO);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIndicesBuffer);
 
-  // クリア
-  gl.bindVertexArray(null);
-}
+    // Draw
+    gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
 
-const load = (filePath: string) => {
-  return fetch(filePath)
-    .then((res: Response) => res.json())
-    .then((data: Model) => {
-      model = data;
-      coneVAO = gl.createVertexArray();
-      gl.bindVertexArray(coneVAO);
-      gl.uniform3fv(attLocation['uModelColor'], model.color);
-      
-      const modelVertexBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, modelVertexBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(model.vertices), gl.STATIC_DRAW);
-
-      // vaoへ命令
-      if (isGLint(attLocation['aVertexPosition'])) {
-        gl.enableVertexAttribArray(attLocation['aVertexPosition']);
-        gl.vertexAttribPointer(attLocation['aVertexPosition'], 3, gl.FLOAT, false, 0, 0);
-      }
-
-      modelIndexBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, modelIndexBuffer);
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(model.indices), gl.STATIC_DRAW);
-
-      gl.bindVertexArray(null);
-    })
-    // コンソールにエラーを出力
-    .catch(console.error);
+    // Clean
+    gl.bindVertexArray(null);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+  }
+  // We catch the `error` and simply output to the screen for testing/debugging purposes
+  catch (error) {
+    console.error(error);
+  }
 }
 
 const initProgram = (): void => {
-  // プログラムを作成
-  program = gl.createProgram();
+  // canvasを設定
+  const canvas = Utils.getCanvas('webgl-canvas');
+  Utils.autoResizeCanvas(canvas);
+
+  // glcontext取得
+  gl = Utils.getGLContext(canvas);
+  gl.clearColor(0.9, 0.9, 0.9, 1);
+  gl.enable(gl.DEPTH_TEST);
+
   // シェーダーのコンパイル
   const vertexShader = Utils.getShader(gl, vertShader, gl.VERTEX_SHADER);
   const fragmentShader = Utils.getShader(gl, fragShader, gl.FRAGMENT_SHADER);
 
+  // プログラムを作成
   // プログラムにシェーダーをアタッチ
+  program = gl.createProgram();
   gl.attachShader(program, vertexShader);
   gl.attachShader(program, fragmentShader);
   gl.linkProgram(program);
@@ -106,36 +90,104 @@ const initProgram = (): void => {
   // プログラムインスタンスを使用
   gl.useProgram(program);
 
-  // コード後半で簡単にアクセスできるように
   // シェーダーの値のロケーションをプログラムインスタンスにアタッチする
-  attLocation['aVertexPosition'] = gl.getAttribLocation(program, 'aVertexPosition');
-  attLocation['uProjectionMatrix'] = gl.getUniformLocation(program, 'uProjectionMatrix');
-  attLocation['uModelViewMatrix'] = gl.getUniformLocation(program, 'uModelViewMatrix');
-  // フラグメントシェーダで使う色情報
-  attLocation['uModelColor'] = gl.getUniformLocation(program, 'uModelColor');
+  attLocation.aVertexPosition = gl.getAttribLocation(program, AttributeKind.aVertexPosition);
+  attLocation.aVertexNormal = gl.getAttribLocation(program, AttributeKind.aVertexNormal)
+  attLocation.uProjectionMatrix = gl.getUniformLocation(program, AttributeKind.uProjectionMatrix);
+  attLocation.uModelViewMatrix = gl.getUniformLocation(program, AttributeKind.uModelViewMatrix);
+  attLocation.uNormalMatrix = gl.getUniformLocation(program, AttributeKind.uNormalMatrix);
+  attLocation.uMaterialDiffuse = gl.getUniformLocation(program, AttributeKind.uMaterialDiffuse);
+  attLocation.uLightDiffuse = gl.getUniformLocation(program, AttributeKind.uLightDiffuse);
+  attLocation.uLightDirection = gl.getUniformLocation(program, AttributeKind.uLightDirection);
 }
 
-function render() {
-  // window.requestAnimationFrame(render); // ブラウザにアニメーションを行わせる
+const initLights = () => {
+  gl.uniform3fv(attLocation.uLightDirection, lightDirection);
+  gl.uniform3fv(attLocation.uLightDiffuse, lightDiffuseColor);
+  gl.uniform3fv(attLocation.uMaterialDiffuse, sphereColor);
+}
+
+const initBuffers = () => {
+  // コードの見通しが非常に悪くなるため
+  // verticesとindicesは./info.tsからインポートする
+  const normals = Utils.calculateNormals(vertices, indices);
+  
+  // Create VAO
+  sphereVAO = gl.createVertexArray();
+
+  // Bind VAO
+  gl.bindVertexArray(sphereVAO);
+
+  // Vertices
+  const sphereVerticesBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, sphereVerticesBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+  // Configure VAO instructions
+  if (isGLint(attLocation.aVertexPosition)) {
+    gl.enableVertexAttribArray(attLocation.aVertexPosition);
+    gl.vertexAttribPointer(attLocation.aVertexPosition, 3, gl.FLOAT, false, 0, 0);
+  }
+
+  // 法線
+  const sphereNormalsBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, sphereNormalsBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
+  if (isGLint(attLocation.aVertexNormal)) {
+    gl.enableVertexAttribArray(attLocation.aVertexNormal);
+    gl.vertexAttribPointer(attLocation.aVertexNormal, 3, gl.FLOAT, false, 0, 0);
+  }
+
+  // インデックス
+  sphereIndicesBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIndicesBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+  // Clean
+  gl.bindVertexArray(null);
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+}
+
+const render = () => {
+  window.requestAnimationFrame(render); // ブラウザにアニメーションを行わせる
   draw();
 }
 
 const init = (): void => {
-  // htmlのcanvasを追加
-  const canvas = Utils.getCanvas('webgl-canvas');
-  Utils.autoResizeCanvas(canvas);
+  initProgram();
+  initBuffers();
+  initLights();
+  render();
 
-  // webgl2のコンテキストを取得
-  gl = Utils.getGLContext(canvas);
-  gl.clearColor(0, 0, 0, 1);
+  initControls();
+}
 
-  // デプステスト？
-  // 深度に合わせてオブジェクトが描画されるようになる
-  gl.enable(gl.DEPTH_TEST); 
-
-  initProgram(); // シェーダコンパイルo
-  load('/common/models/geometries/cone1.json')
-  .then(render);
+const initControls = () => {
+  Utils.configureControls({
+    'Sphere Color': {
+      value: Utils.denormalizeColor(sphereColor),
+      onChange: v => gl.uniform3fv(attLocation.uMaterialDiffuse, Utils.normalizeColor(v))
+    },
+    'Light Diffuse Color': {
+      value: Utils.denormalizeColor(lightDiffuseColor),
+      onChange: v => gl.uniform3fv(attLocation.uLightDiffuse, Utils.normalizeColor(v))
+    },
+    // Spread all values from the reduce onto the controls
+    ...['Translate X', 'Translate Y', 'Translate Z'].reduce((result, name, i) => {
+      result[name] = {
+        value: lightDirection[i],
+        min: -10, max: 10, step: -0.1,
+        onChange(v, state) {
+          gl.uniform3fv(attLocation.uLightDirection, [
+            -state['Translate X'],
+            -state['Translate Y'],
+            state['Translate Z']
+          ]);
+        }
+      };
+      return result;
+    }, {})
+  });
 }
 
 // html実行時にinitを実行する
