@@ -19,9 +19,8 @@ let program: WebGLProgram | null;
 let projectionMatrix = mat4.create();
 let modelViewMatrix = mat4.create();
 let normalMatrix = mat4.create();
-
-let modelIndexBuffer: WebGLBuffer | null = null; // モデルのIBO
-let model: Model; // ジオメトリのデータ
+let angle = 0;
+let lastTime: number | null = null;
 
 // programオブジェクト内のシェーダへのインデックスを格納する
 const attLocation: AttLocation = {}; 
@@ -35,6 +34,8 @@ const draw = (): void => {
   mat4.identity(modelViewMatrix);
   mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -1.5]);
 
+  mat4.rotate(modelViewMatrix, modelViewMatrix, angle * Math.PI / 180, [0, 1, 0]);
+
   mat4.copy(normalMatrix, modelViewMatrix);
   mat4.invert(normalMatrix, normalMatrix);
   mat4.transpose(normalMatrix, normalMatrix);
@@ -46,7 +47,6 @@ const draw = (): void => {
   try {
     // Bind
     gl.bindVertexArray(sphereVAO);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIndicesBuffer);
 
     // Draw
     gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
@@ -102,7 +102,8 @@ const initProgram = (): void => {
 }
 
 const initLights = () => {
-  gl.uniform3fv(attLocation.uLightDirection, lightDirection);
+  // gl.uniform3fv(attLocation.uLightDirection, lightDirection);
+  gl.uniform3f(attLocation.uLightDirection, 0, -1, -1);
   gl.uniform3fv(attLocation.uLightDiffuse, lightDiffuseColor);
   gl.uniform3fv(attLocation.uMaterialDiffuse, sphereColor);
 }
@@ -148,8 +149,18 @@ const initBuffers = () => {
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
 }
 
+const animate = () => {
+  let timeNow = new Date().getTime();
+  if (lastTime) {
+    const elapsed = timeNow - lastTime;
+    angle += (90 * elapsed) / 1000.0;
+  }
+  lastTime = timeNow;
+}
+
 const render = () => {
   window.requestAnimationFrame(render); // ブラウザにアニメーションを行わせる
+  animate();
   draw();
 }
 

@@ -17,8 +17,10 @@ out vec4 vVertexColor;
 void main(void) {
   // 法線の計算
   vec3 N = normalize(vec3(uNormalMatrix * vec4(aVertexNormal, 1.0)));
+  // ライトの位置を計算
+  vec3 light = vec3(uModelViewMatrix * vec4(uLightDirection, 0.0));
   // 光線の向きを計算
-  vec3 L = normalize(uLightDirection);
+  vec3 L = normalize(light);
   // 法線と反転した光線ベクトルの内積（ランバート反射の計算）
   float lambertTerm = dot(N, -L);
   // ランバート反射モデルに基づいた拡散反射色の計算
