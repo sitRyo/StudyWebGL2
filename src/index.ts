@@ -10,14 +10,8 @@ const Utils = new utils();
 let gl: WebGL2RenderingContext = null;
 let vao: WebGLVertexArrayObject | null = null;
 let indicesBuffer: WebGLBuffer | null = null;
-let shininess = 10;
-let lightColor = [1, 1, 1, 1];
-let lightAmbient = [0.03, 0.03, 0.03, 1];
-let lightSpecular = [1, 1, 1, 1];
-let lightDirection = [-0.25, -0.25, -0.25];
-let materialDiffuse = [46 / 256, 99 / 256, 191 / 256, 1];
-let materialAmbient = [1, 1, 1, 1];
-let materialSpecular = [1, 1, 1, 1];
+let azimuth = 0;
+let elevation = 0;
 let program: WebGLProgram | null;
 let projectionMatrix = mat4.create();
 let modelViewMatrix = mat4.create();
@@ -74,6 +68,44 @@ const initLights = () => {
   gl.uniform4fv(attLocation.uLightAmbient, [0.01, 0.01, 0.01, 1]);
   gl.uniform4fv(attLocation.uLightDiffuse, [0.5, 0.5, 0.5, 1]);
   gl.uniform4f(attLocation.uMaterialDiffuse, 0.1, 0.5, 0.8, 1);
+}
+
+const processKey = (ev: KeyboardEvent) => {
+  const lightDirection = gl.getUniform(program, attLocation.uLightDirection);
+  const incrementValue = 10;
+
+  // keyCodeはdeprecatedなので使わないようにします
+  switch (ev.key) {
+    case 'ArrowLeft': {
+      azimuth -= incrementValue;
+      break;
+    }
+    case 'ArrowUp': {
+      elevation += incrementValue;
+      break;
+    }
+    case 'ArrowRight': {
+      azimuth += incrementValue;
+      break;
+    }
+    case 'ArrowUp': {
+      elevation -= incrementValue;
+      break;
+    }
+  }
+
+  azimuth %= 360;
+  elevation %= 360;
+
+  const theta = elevation * Math.PI / 180;
+  const phi = azimuth * Math.PI / 180;
+
+  // 極座標からデカルト座標に変換
+  lightDirection[0] = Math.cos(theta) * Math.sin(phi);
+  lightDirection[1] = Math.sin(theta);
+  lightDirection[2] = Math.cos(theta) * -Math.cos(phi);
+
+  gl.uniform3fv(attLocation.uLightDirection, lightDirection);
 }
 
 const initBuffers = () => {
@@ -183,6 +215,8 @@ const init = (): void => {
   initBuffers();
   initLights();
   render();
+
+  document.onkeydown = processKey;
 }
 
 // html実行時にinitを実行する
