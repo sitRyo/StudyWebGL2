@@ -4,24 +4,23 @@ precision mediump float;
 uniform mat4 uModelViewMatrix;
 uniform mat4 uProjectionMatrix;
 uniform mat4 uNormalMatrix;
-uniform vec3 uLightDirection;
-uniform vec4 uLightAmbient;
-uniform vec4 uLightDiffuse;
-uniform vec4 uMaterialDiffuse;
+uniform vec3 uLightPosition;
 
 in vec3 aVertexPosition;
 in vec3 aVertexNormal;
 
-out vec4 vVertexColor;
+out vec3 vNormal;
+out vec3 vLightRay;
+out vec3 vEyeVector;
 
 void main(void) {
-  vec3 N = vec3(uNormalMatrix * vec4(aVertexNormal, 1.0));
-  vec3 L = normalize(uLightDirection);
-  float lambertTerm = dot(N, -L);
+  vec4 vertex = uModelViewMatrix * vec4(aVertexPosition, 1.0);
+  vec4 light = uModelViewMatrix * vec4(uLightPosition, 1.0);
 
-  vec4 Ia = uLightAmbient;
-  vec4 Id = uMaterialDiffuse * uLightDiffuse * lambertTerm;
+  // Set varyings to be used inside of fragment shader
+  vNormal = vec3(uNormalMatrix * vec4(aVertexNormal, 1.0));
+  vLightRay = vertex.xyz - light.xyz;
+  vEyeVector = -vec3(vertex.xyz);
 
-  vVertexColor = vec4(vec3(Ia + Id), 1.0);
   gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aVertexPosition, 1.0);
 }

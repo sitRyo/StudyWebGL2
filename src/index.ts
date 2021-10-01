@@ -4,200 +4,127 @@ import vertShader from './common/shaders/vertexShader.vert';
 import fragShader from './common/shaders/fragmentShader.frag';
 import { isGLint } from './common/lib/typeGuards';
 import { mat4 } from 'gl-matrix';
-import { AttLocation } from './common/utils/types';
+import { AttLocation, Model } from './common/utils/types';
 
 const Utils = new utils();
-let gl: WebGL2RenderingContext = null;
-let vao: WebGLVertexArrayObject | null = null;
-let indicesBuffer: WebGLBuffer | null = null;
-let azimuth = 0;
-let elevation = 0;
-let program: WebGLProgram | null;
-let projectionMatrix = mat4.create();
-let modelViewMatrix = mat4.create();
-let normalMatrix = mat4.create();
-let indices: number[];
-
 // programオブジェクト内のシェーダへのインデックスを格納する
-const attLocation: AttLocation = {}; 
+const attLocation: AttLocation = {};
 
-const initProgram = (): void => {
-  // canvasを設定
-  const canvas = Utils.getCanvas('webgl-canvas');
-  Utils.autoResizeCanvas(canvas);
+// Storing relevant values globally to be used throughout application
+let gl: WebGL2RenderingContext = null;
+let program: WebGLProgram | null = null;
+let modelViewMatrix = mat4.create();
+let projectionMatrix = mat4.create();
+let normalMatrix = mat4.create();
+let objects: Model[] = [];
+let angle = 0;
+let lastTime = 0;
+let lightPosition = [4.5, 3, 15];
+let shininess = 200;
+let distance = -100;
 
-  // glcontext取得
-  gl = Utils.getGLContext(canvas);
+function initProgram() {
+  // Configure `canvas`
+  const canvas = document.getElementById('webgl-canvas');
+  Utils.autoResizeCanvas(canvas as HTMLCanvasElement);
+
+  // Configure `gl`
+  gl = Utils.getGLContext(canvas as HTMLCanvasElement);
   gl.clearColor(0.9, 0.9, 0.9, 1);
   gl.clearDepth(100);
   gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.LEQUAL); // 深度テストの評価方法（奥にあるものが隠れる）
+  gl.depthFunc(gl.LEQUAL);
 
-  // シェーダーのコンパイル
   const vertexShader = Utils.getShader(gl, vertShader, gl.VERTEX_SHADER);
   const fragmentShader = Utils.getShader(gl, fragShader, gl.FRAGMENT_SHADER);
 
-  // プログラムを作成
-  // プログラムにシェーダーをアタッチ
+  // Configure `program`
   program = gl.createProgram();
   gl.attachShader(program, vertexShader);
   gl.attachShader(program, fragmentShader);
   gl.linkProgram(program);
 
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    console.log('Could not initialize shaders');
+    console.error('Could not initialize shaders');
   }
 
-  // プログラムインスタンスを使用
   gl.useProgram(program);
 
-  // シェーダーの値のロケーションをプログラムインスタンスにアタッチする
+  // Setting locations onto `program` instance
   attLocation.aVertexPosition = gl.getAttribLocation(program, 'aVertexPosition');
   attLocation.aVertexNormal = gl.getAttribLocation(program, 'aVertexNormal');
   attLocation.uProjectionMatrix = gl.getUniformLocation(program, 'uProjectionMatrix');
   attLocation.uModelViewMatrix = gl.getUniformLocation(program, 'uModelViewMatrix');
   attLocation.uNormalMatrix = gl.getUniformLocation(program, 'uNormalMatrix');
-  attLocation.uLightDirection = gl.getUniformLocation(program, 'uLightDirection');
+  attLocation.uMaterialAmbient = gl.getUniformLocation(program, 'uMaterialAmbient');
+  attLocation.uMaterialDiffuse = gl.getUniformLocation(program, 'uMaterialDiffuse');
+  attLocation.uMaterialSpecular = gl.getUniformLocation(program, 'uMaterialSpecular');
+  attLocation.uShininess = gl.getUniformLocation(program, 'uShininess');
+  attLocation.uLightPosition = gl.getUniformLocation(program, 'uLightPosition');
   attLocation.uLightAmbient = gl.getUniformLocation(program, 'uLightAmbient');
   attLocation.uLightDiffuse = gl.getUniformLocation(program, 'uLightDiffuse');
-  attLocation.uMaterialDiffuse = gl.getUniformLocation(program, 'uMaterialDiffuse');
+  attLocation.uLightSpecular = gl.getUniformLocation(program, 'uLightSpecular');
 }
 
-const initLights = () => {
-  gl.uniform3fv(attLocation.uLightDirection, [0, 0, -1]);
-  gl.uniform4fv(attLocation.uLightAmbient, [0.01, 0.01, 0.01, 1]);
-  gl.uniform4fv(attLocation.uLightDiffuse, [0.5, 0.5, 0.5, 1]);
-  gl.uniform4f(attLocation.uMaterialDiffuse, 0.1, 0.5, 0.8, 1);
+// Configure lights
+function initLights() {
+  gl.uniform3fv(attLocation.uLightPosition, lightPosition);
+  gl.uniform4f(attLocation.uLightAmbient, 1, 1, 1, 1);
+  gl.uniform4f(attLocation.uLightDiffuse, 1, 1, 1, 1);
+  gl.uniform4f(attLocation.uLightSpecular, 1, 1, 1, 1);
+  gl.uniform4f(attLocation.uMaterialAmbient, 0.1, 0.1, 0.1, 1);
+  gl.uniform4f(attLocation.uMaterialDiffuse, 0.5, 0.8, 0.1, 1);
+  gl.uniform4f(attLocation.uMaterialSpecular, 0.6, 0.6, 0.6, 1);
+  gl.uniform1f(attLocation.uShininess, shininess);
 }
 
-const processKey = (ev: KeyboardEvent) => {
-  const lightDirection = gl.getUniform(program, attLocation.uLightDirection);
-  const incrementValue = 10;
-
-  // keyCodeはdeprecatedなので使わないようにします
-  switch (ev.key) {
-    case 'ArrowLeft': {
-      azimuth -= incrementValue;
-      break;
-    }
-    case 'ArrowUp': {
-      elevation += incrementValue;
-      break;
-    }
-    case 'ArrowRight': {
-      azimuth += incrementValue;
-      break;
-    }
-    case 'ArrowUp': {
-      elevation -= incrementValue;
-      break;
-    }
-  }
-
-  azimuth %= 360;
-  elevation %= 360;
-
-  const theta = elevation * Math.PI / 180;
-  const phi = azimuth * Math.PI / 180;
-
-  // 極座標からデカルト座標に変換
-  lightDirection[0] = Math.cos(theta) * Math.sin(phi);
-  lightDirection[1] = Math.sin(theta);
-  lightDirection[2] = Math.cos(theta) * -Math.cos(phi);
-
-  gl.uniform3fv(attLocation.uLightDirection, lightDirection);
-}
-
-const initBuffers = () => {
-  const vertices = [
-    -20, -8, 20, // 0
-    -10, -8, 0,  // 1
-    10, -8, 0,   // 2
-    20, -8, 20,  // 3
-    -20, 8, 20,  // 4
-    -10, 8, 0,   // 5
-    10, 8, 0,    // 6
-    20, 8, 20    // 7
-  ];
-
-  indices = [
-    0, 5, 4,
-    1, 5, 0,
-    1, 6, 5,
-    2, 6, 1,
-    2, 7, 6,
-    3, 7, 2
-  ];
-
-  // Create VAO
-  vao = gl.createVertexArray();
-
-  // Bind VAO
-  gl.bindVertexArray(vao);
-
-  const normals = Utils.calculateNormals(vertices, indices);
-
-  // Vertices
-  const verticesBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-  // Configure VAO instructions
-  if (isGLint(attLocation.aVertexPosition)) {
-    gl.enableVertexAttribArray(attLocation.aVertexPosition);
-    gl.vertexAttribPointer(attLocation.aVertexPosition, 3, gl.FLOAT, false, 0, 0);
-  }
-
-  // 法線
-  const normalsBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, normalsBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
-  if (isGLint(attLocation.aVertexNormal)) {
-    gl.enableVertexAttribArray(attLocation.aVertexNormal);
-    gl.vertexAttribPointer(attLocation.aVertexNormal, 3, gl.FLOAT, false, 0, 0);
-  }
-
-  // インデックス
-  indicesBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-
-  // Clean
-  gl.bindVertexArray(null);
-  gl.bindBuffer(gl.ARRAY_BUFFER, null);
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-}
-
-const draw = (): void => {
-  const { width, height } = gl.canvas;
-
-  // シーンのクリア
-  gl.viewport(0, 0, width, height);
+function draw() {
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  mat4.perspective(projectionMatrix, 45, width / height, 0.1, 10000);
-  mat4.identity(modelViewMatrix);
-  mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -40]);
+  mat4.perspective(projectionMatrix, 45, gl.canvas.width / gl.canvas.height, 0.1, 1000);
 
-  mat4.copy(normalMatrix, modelViewMatrix);
-  mat4.invert(normalMatrix, normalMatrix);
-  mat4.transpose(normalMatrix, normalMatrix);
-
-  gl.uniformMatrix4fv(attLocation.uModelViewMatrix, false, modelViewMatrix);
-  gl.uniformMatrix4fv(attLocation.uProjectionMatrix, false, projectionMatrix);
-  gl.uniformMatrix4fv(attLocation.uNormalMatrix, false, normalMatrix);
-
+  // We will start using the `try/catch` to capture any errors from our `draw` calls
   try {
-    // Bind
-    gl.bindVertexArray(vao);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
+    // Iterate over every object
+    objects.forEach(object => {
+      // We will cover these operations in later chapters
+      mat4.identity(modelViewMatrix);
+      mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, distance]);
+      mat4.rotate(modelViewMatrix, modelViewMatrix, 30 * Math.PI / 180, [1, 0, 0]);
+      mat4.rotate(modelViewMatrix, modelViewMatrix, angle * Math.PI / 180, [0, 1, 0]);
 
-    // Draw
-    gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+      // If object is the light, we update its position
+      if (object.alias === 'light') {
+        const lightPosition = gl.getUniform(program, attLocation.uLightPosition);
+        mat4.translate(modelViewMatrix, modelViewMatrix, lightPosition);
+      }
 
-    // Clean
-    gl.bindVertexArray(null);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+      mat4.copy(normalMatrix, modelViewMatrix);
+      mat4.invert(normalMatrix, normalMatrix);
+      mat4.transpose(normalMatrix, normalMatrix);
+
+      gl.uniformMatrix4fv(attLocation.uModelViewMatrix, false, modelViewMatrix);
+      gl.uniformMatrix4fv(attLocation.uProjectionMatrix, false, projectionMatrix);
+      gl.uniformMatrix4fv(attLocation.uNormalMatrix, false, normalMatrix);
+
+      // Set lighting data
+      gl.uniform4fv(attLocation.uMaterialAmbient, object.ambient);
+      gl.uniform4fv(attLocation.uMaterialDiffuse, object.diffuse);
+      gl.uniform4fv(attLocation.uMaterialSpecular, object.specular);
+
+      // Bind
+      gl.bindVertexArray(object.vao);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, object.ibo);
+
+      // Draw
+      gl.drawElements(gl.TRIANGLES, object.indices.length, gl.UNSIGNED_SHORT, 0);
+
+      // Clean
+      gl.bindVertexArray(null);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    });
   }
   // We catch the `error` and simply output to the screen for testing/debugging purposes
   catch (error) {
@@ -205,19 +132,130 @@ const draw = (): void => {
   }
 }
 
-const render = () => {
-  window.requestAnimationFrame(render); // ブラウザにアニメーションを行わせる
-  draw();
+// Return the associated object, given its `alias`
+function getObject(alias) {
+  return objects.find(object => object.alias === alias);
 }
 
-const init = (): void => {
+function animate() {
+  const timeNow = new Date().getTime();
+  if (lastTime) {
+    const elapsed = timeNow - lastTime;
+    angle += (90 * elapsed) / 10000.0;
+  }
+  lastTime = timeNow;
+}
+
+function render() {
+  requestAnimationFrame(render);
+  draw();
+  animate();
+}
+
+function loadObject(filePath, alias) {
+  fetch(filePath)
+    .then(res => res.json())
+    .then(data => {
+      data.alias = alias;
+
+      // Configure VAO
+      const vao = gl.createVertexArray();
+      gl.bindVertexArray(vao);
+
+      // Vertices
+      const vertexBufferObject = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBufferObject);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertices), gl.STATIC_DRAW);
+      // Configure instructions for VAO
+      if (isGLint(attLocation.aVertexPosition)) {
+        gl.enableVertexAttribArray(attLocation.aVertexPosition);
+        gl.vertexAttribPointer(attLocation.aVertexPosition, 3, gl.FLOAT, false, 0, 0);
+      }
+
+      // Normals
+      const normalBufferObject = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, normalBufferObject);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(Utils.calculateNormals(data.vertices, data.indices)), gl.STATIC_DRAW);
+      // Configure instructions for VAO
+      if (isGLint(attLocation.aVertexNormal)) {
+        gl.enableVertexAttribArray(attLocation.aVertexNormal);
+        gl.vertexAttribPointer(attLocation.aVertexNormal, 3, gl.FLOAT, false, 0, 0);
+      }
+
+      // Indices
+      const indexBufferObject = gl.createBuffer();
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBufferObject);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data.indices), gl.STATIC_DRAW);
+
+      // Attach values to be able to reference later for drawing
+      data.vao = vao;
+      data.ibo = indexBufferObject;
+
+      // Push onto objects for later reference
+      objects.push(data);
+
+      // Clean
+      gl.bindVertexArray(vao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    });
+}
+
+// Load each individual object
+function load() {
+  loadObject('/common/models/geometries/plane.json', 'plane');
+  loadObject('/common/models/geometries/cone2.json', 'cone');
+  loadObject('/common/models/geometries/sphere1.json', 'sphere');
+  loadObject('/common/models/geometries/sphere3.json', 'light');
+}
+
+function init() {
   initProgram();
-  initBuffers();
   initLights();
+  load();
   render();
 
-  document.onkeydown = processKey;
+  initControls();
 }
+
+function initControls() {
+  Utils.configureControls({
+    'Sphere Color': {
+      value: [0, 255, 0],
+      onChange: v => getObject('sphere').diffuse = [...Utils.normalizeColor(v), 1.0]
+    },
+    'Cone Color': {
+      value: [235, 0, 210],
+      onChange: v => getObject('cone').diffuse = [...Utils.normalizeColor(v), 1.0]
+    },
+    Shininess: {
+      value: shininess,
+      min: 1, max: 50, step: 0.1,
+      onChange: v => gl.uniform1f(attLocation.uShininess, v)
+    },
+    // Spread all values from the reduce onto the controls
+    ...['Translate X', 'Translate Y', 'Translate Z'].reduce((result, name, i) => {
+      result[name] = {
+        value: lightPosition[i],
+        min: -50, max: 50, step: -0.1,
+        onChange(v, state) {
+          gl.uniform3fv(attLocation.uLightPosition, [
+            state['Translate X'],
+            state['Translate Y'],
+            state['Translate Z']
+          ]);
+        }
+      };
+      return result;
+    }, {}),
+    Distance: {
+      value: distance,
+      min: -200, max: -50, step: 0.1,
+      onChange: v => distance = v
+    }
+  });
+}
+
 
 // html実行時にinitを実行する
 (() => init())();
