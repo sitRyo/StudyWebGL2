@@ -8,7 +8,7 @@ export interface ConfigureControl {
   }
 }
 
-class utils {
+class Utils {
   constructor() {}
 
   getCanvas = (id: string): HTMLCanvasElement => {
@@ -180,4 +180,4 @@ class utils {
   }
 }
 
-export default utils;
+export default Utils;

@@ -1,12 +1,12 @@
 import './common/lib/normalize.css'
-import utils from './common/utils/utils'
+import Utils from './common/utils/Utils'
 import vertShader from './common/shaders/vertexShader.vert';
 import fragShader from './common/shaders/fragmentShader.frag';
 import { isGLint } from './common/lib/typeGuards';
 import { mat4 } from 'gl-matrix';
 import { AttLocation, Model } from './common/utils/types';
 
-const Utils = new utils();
+const utils = new Utils();
 // programオブジェクト内のシェーダへのインデックスを格納する
 const attLocation: AttLocation = {};
 
@@ -26,17 +26,17 @@ let distance = -100;
 function initProgram() {
   // Configure `canvas`
   const canvas = document.getElementById('webgl-canvas');
-  Utils.autoResizeCanvas(canvas as HTMLCanvasElement);
+  utils.autoResizeCanvas(canvas as HTMLCanvasElement);
 
   // Configure `gl`
-  gl = Utils.getGLContext(canvas as HTMLCanvasElement);
+  gl = utils.getGLContext(canvas as HTMLCanvasElement);
   gl.clearColor(0.9, 0.9, 0.9, 1);
   gl.clearDepth(100);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
 
-  const vertexShader = Utils.getShader(gl, vertShader, gl.VERTEX_SHADER);
-  const fragmentShader = Utils.getShader(gl, fragShader, gl.FRAGMENT_SHADER);
+  const vertexShader = utils.getShader(gl, vertShader, gl.VERTEX_SHADER);
+  const fragmentShader = utils.getShader(gl, fragShader, gl.FRAGMENT_SHADER);
 
   // Configure `program`
   program = gl.createProgram();
@@ -175,7 +175,7 @@ function loadObject(filePath, alias) {
       // Normals
       const normalBufferObject = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, normalBufferObject);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(Utils.calculateNormals(data.vertices, data.indices)), gl.STATIC_DRAW);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(utils.calculateNormals(data.vertices, data.indices)), gl.STATIC_DRAW);
       // Configure instructions for VAO
       if (isGLint(attLocation.aVertexNormal)) {
         gl.enableVertexAttribArray(attLocation.aVertexNormal);
@@ -219,14 +219,14 @@ function init() {
 }
 
 function initControls() {
-  Utils.configureControls({
+  utils.configureControls({
     'Sphere Color': {
       value: [0, 255, 0],
-      onChange: v => getObject('sphere').diffuse = [...Utils.normalizeColor(v), 1.0]
+      onChange: v => getObject('sphere').diffuse = [...utils.normalizeColor(v), 1.0]
     },
     'Cone Color': {
       value: [235, 0, 210],
-      onChange: v => getObject('cone').diffuse = [...Utils.normalizeColor(v), 1.0]
+      onChange: v => getObject('cone').diffuse = [...utils.normalizeColor(v), 1.0]
     },
     Shininess: {
       value: shininess,
