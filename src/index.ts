@@ -4,24 +4,24 @@ import vertShader from './common/shaders/vertexShader.vert';
 import fragShader from './common/shaders/fragmentShader.frag';
 import { isGLint } from './common/lib/typeGuards';
 import { mat4 } from 'gl-matrix';
-import { AttLocation, Model } from './common/utils/types';
+import { AttLocation, GLAttribute, Model } from './common/utils/types';
+import { Program } from './common/utils/Program';
 
 const utils = new Utils();
-// programオブジェクト内のシェーダへのインデックスを格納する
-const attLocation: AttLocation = {};
 
 // Storing relevant values globally to be used throughout application
 let gl: WebGL2RenderingContext = null;
-let program: WebGLProgram | null = null;
+let program: Program;
 let modelViewMatrix = mat4.create();
 let projectionMatrix = mat4.create();
 let normalMatrix = mat4.create();
-let objects: Model[] = [];
+let clearColor = [0.9, 0.9, 0.9];
 let angle = 0;
 let lastTime = 0;
 let lightPosition = [4.5, 3, 15];
 let shininess = 200;
 let distance = -100;
+let parts: Model[] = [];
 
 function initProgram() {
   // Configure `canvas`
@@ -35,106 +35,61 @@ function initProgram() {
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
 
-  const vertexShader = utils.getShader(gl, vertShader, gl.VERTEX_SHADER);
-  const fragmentShader = utils.getShader(gl, fragShader, gl.FRAGMENT_SHADER);
-
   // Configure `program`
-  program = gl.createProgram();
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-  gl.linkProgram(program);
+  program = new Program(gl, vertShader, fragShader);
+  
+  const attributes: GLAttribute[] = [
+    'aVertexPosition',
+    'aVertexNormal',
+  ];
 
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    console.error('Could not initialize shaders');
-  }
+  const uniforms: GLAttribute[] = [
+    'uProjectionMatrix',
+    'uModelViewMatrix',
+    'uNormalMatrix',
+    'uLightAmbient',
+    'uLightPosition',
+    'uMaterialSpecular',
+    'uMaterialDiffuse',
+    'uShininess',
+  ];
 
-  gl.useProgram(program);
-
-  // Setting locations onto `program` instance
-  attLocation.aVertexPosition = gl.getAttribLocation(program, 'aVertexPosition');
-  attLocation.aVertexNormal = gl.getAttribLocation(program, 'aVertexNormal');
-  attLocation.uProjectionMatrix = gl.getUniformLocation(program, 'uProjectionMatrix');
-  attLocation.uModelViewMatrix = gl.getUniformLocation(program, 'uModelViewMatrix');
-  attLocation.uNormalMatrix = gl.getUniformLocation(program, 'uNormalMatrix');
-  attLocation.uMaterialAmbient = gl.getUniformLocation(program, 'uMaterialAmbient');
-  attLocation.uMaterialDiffuse = gl.getUniformLocation(program, 'uMaterialDiffuse');
-  attLocation.uMaterialSpecular = gl.getUniformLocation(program, 'uMaterialSpecular');
-  attLocation.uShininess = gl.getUniformLocation(program, 'uShininess');
-  attLocation.uLightPosition = gl.getUniformLocation(program, 'uLightPosition');
-  attLocation.uLightAmbient = gl.getUniformLocation(program, 'uLightAmbient');
-  attLocation.uLightDiffuse = gl.getUniformLocation(program, 'uLightDiffuse');
-  attLocation.uLightSpecular = gl.getUniformLocation(program, 'uLightSpecular');
+  program.load(attributes, uniforms);
 }
 
 // Configure lights
 function initLights() {
-  gl.uniform3fv(attLocation.uLightPosition, lightPosition);
-  gl.uniform4f(attLocation.uLightAmbient, 1, 1, 1, 1);
-  gl.uniform4f(attLocation.uLightDiffuse, 1, 1, 1, 1);
-  gl.uniform4f(attLocation.uLightSpecular, 1, 1, 1, 1);
-  gl.uniform4f(attLocation.uMaterialAmbient, 0.1, 0.1, 0.1, 1);
-  gl.uniform4f(attLocation.uMaterialDiffuse, 0.5, 0.8, 0.1, 1);
-  gl.uniform4f(attLocation.uMaterialSpecular, 0.6, 0.6, 0.6, 1);
-  gl.uniform1f(attLocation.uShininess, shininess);
+  gl.uniform3fv(program.attLocation.uLightPosition, lightPosition);
+  gl.uniform3f(program.attLocation.uLightAmbient, 0.1, 0.1, 0.1);
+  gl.uniform3f(program.attLocation.uMaterialDiffuse, 0.8, 0.8, 0.8);
+  gl.uniform3f(program.attLocation.uMaterialDiffuse, 0.8, 0.8, 0.8);
+  gl.uniform1f(program.attLocation.uShininess, shininess);
 }
 
 function draw() {
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
   mat4.perspective(projectionMatrix, 45, gl.canvas.width / gl.canvas.height, 0.1, 1000);
+  mat4.identity(modelViewMatrix);
+  mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, distance]);
+  mat4.rotate(modelViewMatrix, modelViewMatrix, 20 * Math.PI / 180, [1, 0, 0]);
+  mat4.rotate(modelViewMatrix, modelViewMatrix, angle * Math.PI / 180, [0, 1, 0]);
 
-  // We will start using the `try/catch` to capture any errors from our `draw` calls
-  try {
-    // Iterate over every object
-    objects.forEach(object => {
-      // We will cover these operations in later chapters
-      mat4.identity(modelViewMatrix);
-      mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, distance]);
-      mat4.rotate(modelViewMatrix, modelViewMatrix, 30 * Math.PI / 180, [1, 0, 0]);
-      mat4.rotate(modelViewMatrix, modelViewMatrix, angle * Math.PI / 180, [0, 1, 0]);
+  gl.uniformMatrix4fv(program.attLocation.uProjectionMatrix, false, projectionMatrix);
+  gl.uniformMatrix4fv(program.attLocation.uModelViewMatrix, false, modelViewMatrix);
+  gl.uniformMatrix4fv(program.attLocation.uNormalMatrix, false, normalMatrix);
 
-      // If object is the light, we update its position
-      if (object.alias === 'light') {
-        const lightPosition = gl.getUniform(program, attLocation.uLightPosition);
-        mat4.translate(modelViewMatrix, modelViewMatrix, lightPosition);
-      }
+  parts.forEach(part => {
+    gl.bindVertexArray(part.vao);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, part.ibo);
 
-      mat4.copy(normalMatrix, modelViewMatrix);
-      mat4.invert(normalMatrix, normalMatrix);
-      mat4.transpose(normalMatrix, normalMatrix);
+    gl.drawElements(gl.TRIANGLES, part.indices.length, gl.UNSIGNED_SHORT, 0);
+  });
 
-      gl.uniformMatrix4fv(attLocation.uModelViewMatrix, false, modelViewMatrix);
-      gl.uniformMatrix4fv(attLocation.uProjectionMatrix, false, projectionMatrix);
-      gl.uniformMatrix4fv(attLocation.uNormalMatrix, false, normalMatrix);
-
-      // Set lighting data
-      gl.uniform4fv(attLocation.uMaterialAmbient, object.ambient);
-      gl.uniform4fv(attLocation.uMaterialDiffuse, object.diffuse);
-      gl.uniform4fv(attLocation.uMaterialSpecular, object.specular);
-
-      // Bind
-      gl.bindVertexArray(object.vao);
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, object.ibo);
-
-      // Draw
-      gl.drawElements(gl.TRIANGLES, object.indices.length, gl.UNSIGNED_SHORT, 0);
-
-      // Clean
-      gl.bindVertexArray(null);
-      gl.bindBuffer(gl.ARRAY_BUFFER, null);
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-    });
-  }
-  // We catch the `error` and simply output to the screen for testing/debugging purposes
-  catch (error) {
-    console.error(error);
-  }
-}
-
-// Return the associated object, given its `alias`
-function getObject(alias) {
-  return objects.find(object => object.alias === alias);
+  gl.bindVertexArray(null);
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
 }
 
 function animate() {
@@ -152,61 +107,48 @@ function render() {
   animate();
 }
 
-function loadObject(filePath, alias) {
-  fetch(filePath)
+// Load each individual object
+function load() {
+  for (let i = 1; i < 179; ++i) {
+    fetch(`/common/models/nissan-gtr/part${i}.json`)
     .then(res => res.json())
-    .then(data => {
-      data.alias = alias;
-
-      // Configure VAO
+    .then((part: Model) => {
       const vao = gl.createVertexArray();
       gl.bindVertexArray(vao);
 
-      // Vertices
+      // 頂点
       const vertexBufferObject = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexBufferObject);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertices), gl.STATIC_DRAW);
-      // Configure instructions for VAO
-      if (isGLint(attLocation.aVertexPosition)) {
-        gl.enableVertexAttribArray(attLocation.aVertexPosition);
-        gl.vertexAttribPointer(attLocation.aVertexPosition, 3, gl.FLOAT, false, 0, 0);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(part.vertices), gl.STATIC_DRAW);
+      if (isGLint(program.attLocation.aVertexPosition)) {
+        gl.enableVertexAttribArray(program.attLocation.aVertexPosition);
+        gl.vertexAttribPointer(program.attLocation.aVertexPosition, 3, gl.FLOAT, false, 0, 0);
       }
 
-      // Normals
+      // 法線
       const normalBufferObject = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, normalBufferObject);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(utils.calculateNormals(data.vertices, data.indices)), gl.STATIC_DRAW);
-      // Configure instructions for VAO
-      if (isGLint(attLocation.aVertexNormal)) {
-        gl.enableVertexAttribArray(attLocation.aVertexNormal);
-        gl.vertexAttribPointer(attLocation.aVertexNormal, 3, gl.FLOAT, false, 0, 0);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(utils.calculateNormals(part.vertices, part.indices)), gl.STATIC_DRAW);
+      if (isGLint(program.attLocation.aVertexNormal)) {
+        gl.enableVertexAttribArray(program.attLocation.aVertexNormal);
+        gl.vertexAttribPointer(program.attLocation.aVertexNormal, 3, gl.FLOAT, false, 0, 0);
       }
 
-      // Indices
+      // インデックス
       const indexBufferObject = gl.createBuffer();
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBufferObject);
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data.indices), gl.STATIC_DRAW);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(part.indices), gl.STATIC_DRAW);
 
-      // Attach values to be able to reference later for drawing
-      data.vao = vao;
-      data.ibo = indexBufferObject;
+      part.vao = vao;
+      part.ibo = indexBufferObject;
 
-      // Push onto objects for later reference
-      objects.push(data);
+      parts.push(part);
 
-      // Clean
-      gl.bindVertexArray(vao);
+      gl.bindVertexArray(null);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
     });
-}
-
-// Load each individual object
-function load() {
-  loadObject('/common/models/geometries/plane.json', 'plane');
-  loadObject('/common/models/geometries/cone2.json', 'cone');
-  loadObject('/common/models/geometries/sphere1.json', 'sphere');
-  loadObject('/common/models/geometries/sphere3.json', 'light');
+  }
 }
 
 function init() {
@@ -220,26 +162,31 @@ function init() {
 
 function initControls() {
   utils.configureControls({
-    'Sphere Color': {
-      value: [0, 255, 0],
-      onChange: v => getObject('sphere').diffuse = [...utils.normalizeColor(v), 1.0]
+    'Car Color': {
+      value: [255, 255, 255],
+      onChange: v => gl.uniform3f(program.attLocation.uMaterialDiffuse, ...utils.normalizeColor(v))
     },
-    'Cone Color': {
-      value: [235, 0, 210],
-      onChange: v => getObject('cone').diffuse = [...utils.normalizeColor(v), 1.0]
+    Background: {
+      value: utils.denormalizeColor(clearColor),
+      onChange: v => gl.clearColor(...utils.normalizeColor(v), 1)
     },
     Shininess: {
       value: shininess,
       min: 1, max: 50, step: 0.1,
-      onChange: v => gl.uniform1f(attLocation.uShininess, v)
+      onChange: value => gl.uniform1f(program.attLocation.uShininess, value)
+    },
+    Distance: {
+      value: distance,
+      min: -600, max: -80, step: 1,
+      onChange: value => distance = value
     },
     // Spread all values from the reduce onto the controls
     ...['Translate X', 'Translate Y', 'Translate Z'].reduce((result, name, i) => {
       result[name] = {
         value: lightPosition[i],
-        min: -50, max: 50, step: -0.1,
+        min: -1000, max: 1000, step: -0.1,
         onChange(v, state) {
-          gl.uniform3fv(attLocation.uLightPosition, [
+          gl.uniform3fv(program.attLocation.uLightPosition, [
             state['Translate X'],
             state['Translate Y'],
             state['Translate Z']
@@ -248,14 +195,8 @@ function initControls() {
       };
       return result;
     }, {}),
-    Distance: {
-      value: distance,
-      min: -200, max: -50, step: 0.1,
-      onChange: v => distance = v
-    }
   });
 }
-
 
 // html実行時にinitを実行する
 (() => init())();

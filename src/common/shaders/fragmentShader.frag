@@ -1,13 +1,10 @@
 #version 300 es
 precision mediump float;
 
-uniform vec4 uLightAmbient;
-uniform vec4 uLightDiffuse;
-uniform vec4 uLightSpecular;
-uniform vec4 uMaterialAmbient;
-uniform vec4 uMaterialDiffuse;
-uniform vec4 uMaterialSpecular;
 uniform float uShininess;
+uniform vec3 uLightAmbient;
+uniform vec3 uMaterialDiffuse;
+uniform vec3 uMaterialSpecular;
 
 in vec3 vNormal;
 in vec3 vLightRay;
@@ -19,24 +16,15 @@ void main(void) {
   vec3 L = normalize(vLightRay);
   vec3 N = normalize(vNormal);
   float lambertTerm = dot(N, -L);
-
-  // Ambient
-  vec4 Ia = uLightAmbient * uMaterialAmbient;
-  // Diffuse
-  vec4 Id = vec4(0.0, 0.0, 0.0, 1.0);
-  // Specular
-  vec4 Is = vec4(0.0, 0.0, 0.0, 1.0);
+  vec3 finalColor = uLightAmbient;
 
   if (lambertTerm > 0.0) {
-    // Update diffuse
-    Id = uLightDiffuse * uMaterialDiffuse * lambertTerm;
+    finalColor += uMaterialDiffuse * lambertTerm;
     vec3 E = normalize(vEyeVector);
     vec3 R = reflect(L, N);
-    float specular = pow( max(dot(R, E), 0.0), uShininess);
-    // Update specular
-    Is = uLightSpecular * uMaterialSpecular * specular;
+    float specular = pow((max(dot(R, E), 0.0)), uShininess);
+    finalColor += uMaterialSpecular * specular;
   }
 
-  // Final fragment color takes into account ambient, diffuse, and specular
-  fragColor = vec4(vec3(Ia + Id + Is), 1.0);
+  fragColor = vec4(finalColor, 1.0);
 }

@@ -22,3 +22,5 @@ export interface Model {
 export const AttributeKind = strEnum(['aVertexPosition', 'aVertexNormal', 'uProjectionMatrix', 'uModelViewMatrix', 'uNormalMatrix', 'uMaterialAmbient', 'uMaterialDiffuse', 'uMaterialSpecular', 'uShininess', 'uLightAmbient', 'uLightDiffuse', 'uLightSpecular', 'uLightDirection', 'uLightPosition']);
 export type GLAttribute = keyof typeof AttributeKind;
 export type AttLocation = { [key in GLAttribute]?: GLint | WebGLUniformLocation | null };
+
+export type vec3 = [number, number, number];

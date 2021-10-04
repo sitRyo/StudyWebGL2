@@ -1,4 +1,5 @@
 import { GUI, GUIParams } from 'dat.gui';
+import { vec3 } from './types';
 
 export interface ConfigureControl {
   RenderingMode: {
@@ -171,12 +172,12 @@ class Utils {
   }
 
   // colorはvec4とかにできればいいんだろうなあと思う
-  normalizeColor = (color: number[]): number[] => {
-    return color.map(c => c / 255);
+  normalizeColor = (color: number[]): vec3 => {
+    return color.map(c => c / 255) as vec3;
   }
 
-  denormalizeColor = (color: number[]): number[] => {
-    return color.map(c => c * 255);
+  denormalizeColor = (color: number[]): vec3 => {
+    return color.map(c => c * 255) as vec3;
   }
 }
 
