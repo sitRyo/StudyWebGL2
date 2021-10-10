@@ -16,11 +16,12 @@ export interface Model {
   specular?: number[];
   vao?: WebGLVertexArrayObject;
   ibo?: WebGLBuffer;
+  wireframe?: GLint;
 }
 
 // シェーダーに渡すattributeのリテラル型定義
-export const AttributeKind = strEnum(['aVertexPosition', 'aVertexNormal', 'uProjectionMatrix', 'uModelViewMatrix', 'uNormalMatrix', 'uMaterialAmbient', 'uMaterialDiffuse', 'uMaterialSpecular', 'uShininess', 'uLightAmbient', 'uLightDiffuse', 'uLightSpecular', 'uLightDirection', 'uLightPosition']);
+export const AttributeKind = strEnum(['aVertexPosition', 'aVertexNormal', 'uProjectionMatrix', 'uModelViewMatrix', 'uNormalMatrix', 'uMaterialAmbient', 'uMaterialDiffuse', 'uMaterialSpecular', 'uShininess', 'uLightAmbient', 'uLightDiffuse', 'uLightSpecular', 'uLightDirection', 'uLightPosition', 'aVertexColor', 'aVertexTextureCoords', 'aVertexTangent', 'uWireframe']);
 export type GLAttribute = keyof typeof AttributeKind;
 export type AttLocation = { [key in GLAttribute]?: GLint | WebGLUniformLocation | null };
 
-export type vec3 = [number, number, number];
+export type oVec3 = [number, number, number];

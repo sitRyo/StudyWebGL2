@@ -1,11 +1,11 @@
 import './common/lib/normalize.css'
-import Utils from './common/utils/Utils'
+import Utils from './common/js/Utils'
 import vertShader from './common/shaders/vertexShader.vert';
 import fragShader from './common/shaders/fragmentShader.frag';
-import { isGLint } from './common/lib/typeGuards';
+import { isGLint } from './common/js/typeGuards';
 import { mat4 } from 'gl-matrix';
-import { AttLocation, GLAttribute, Model } from './common/utils/types';
-import { Program } from './common/utils/Program';
+import { AttLocation, GLAttribute, Model } from './common/js/types';
+import { Program } from './common/js/Program';
 
 const utils = new Utils();
 

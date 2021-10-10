@@ -49,7 +49,7 @@ export class Program {
 
   setUniformLocations = (uniforms: GLAttribute[]): void => {
     uniforms.forEach(uniform => {
-      this.attLocation[uniform] = this.gl.getUniformLocation(this.program, uniform);
+      this[uniform] = this.gl.getUniformLocation(this.program, uniform);
     });
   }
 
