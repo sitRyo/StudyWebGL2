@@ -1,5 +1,7 @@
-import { EventEmitter } from "./EventEmitter";
+import EventEmitter from './EventEmitter';
 
+// Abstracts away the requestAnimationFrame in an effort to provie a clock instance
+// to sync various parts of an application
 class Clock extends EventEmitter {
   isRunning: boolean;
 
@@ -10,26 +12,35 @@ class Clock extends EventEmitter {
     this.tick = this.tick.bind(this);
     this.tick();
 
-    window.onblur = () => {
+    window.onblur = (): void => {
       this.stop();
       console.info('Clock stopped');
     };
 
-    window.onfocus = () => {
+    window.onfocus = (): void => {
       this.start();
       console.info('Clock resumed');
     };
   }
 
-  tick = (): void => {
+  // Gets called on every requestAnimationFrame cycle
+  tick(): void {
     if (this.isRunning) {
       this.emit('tick');
     }
     requestAnimationFrame(this.tick);
   }
 
-  start = (): void => { this.isRunning = true; }
-  stop = (): void => { this.isRunning = false; }
+  // Starts the clock
+  start(): void {
+    this.isRunning = true;
+  }
+
+  // Stops the clock
+  stop(): void {
+    this.isRunning = false;
+  }
+
 }
 
 export default Clock;

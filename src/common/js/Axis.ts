@@ -1,21 +1,21 @@
-export class Axis {
-  dimension: number;
+class Axis {
   alias: string;
   wireframe: boolean;
   indices: number[];
+  dimension: number;
   vertices: number[];
 
-  constructor(dimension: number = 10) {
+  constructor(dimension = 10) {
     this.alias = 'axis';
 
     this.wireframe = true;
     this.indices = [0, 1, 2, 3, 4, 5];
     this.dimension = dimension;
 
-    this.build(this.dimension);
+    this.build(this.dimension)
   }
 
-  build = (dimension: number) => {
+  build(dimension: number): void {
     if (dimension) {
       this.dimension = dimension;
     }
@@ -26,7 +26,10 @@ export class Axis {
       0.0, -dimension / 2, 0.0,
       0.0, dimension / 2, 0.0,
       0.0, 0.0, -dimension,
-      0.0, 0.0, dimension,
+      0.0, 0.0, dimension
     ];
   }
+
 }
+
+export default Axis;

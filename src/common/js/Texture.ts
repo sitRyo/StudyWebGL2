@@ -1,3 +1,4 @@
+// Encapsulates creating of WebGL textures
 class Texture {
   gl: WebGL2RenderingContext;
   glTexture: WebGLTexture;
@@ -15,11 +16,13 @@ class Texture {
     }
   }
 
-  setImage = (source: string) => {
+  // Sets the texture image source
+  setImage(source: string): void {
     this.image.src = source;
   }
 
-  handleLoadedTexture = () => {
+  // Configure texture
+  handleLoadedTexture(): void {
     const { gl, image, glTexture } = this;
     // Bind
     gl.bindTexture(gl.TEXTURE_2D, glTexture);
@@ -31,6 +34,7 @@ class Texture {
     // Clean
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
+
 }
 
 export default Texture;

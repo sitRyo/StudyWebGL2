@@ -1,49 +1,52 @@
-import '../common/lib/normalize.css';
-import Utils from '../common/js/Utils';
-import vertShader from '../common/shaders/ch04/01_vertexShader.vert';
-import fragShader from '../common/shaders/ch04/01_fragmentShader.frag';
 import { mat4, vec3 } from 'gl-matrix';
-import { GLAttribute, Model } from '../common/js/types';
-import { Program } from '../common/js/Program';
+import Utils from '../common/js/Utils';
 import Clock from '../common/js/Clock';
-import { Scene } from '../common/js/Scene';
-import { Floor } from '../common/js/Floor';
-import { Axis } from '../common/js/Axis';
+import Program from '../common/js/Program';
+import Scene from '../common/js/Scene';
+import Floor from '../common/js/Floor';
+import Axis from '../common/js/Axis';
+import vertexShader from '../common/shaders/ch04/01_vertexShader.vert';
+import fragmentShader from '../common/shaders/ch04/01_fragmentShader.frag';
+import { GLAttribute, GLUniform } from '../common/js/types';
 
 const utils = new Utils();
 
-// Storing relevant values globally to be used throughout application
-let gl: WebGL2RenderingContext = null;
+let gl: WebGL2RenderingContext;
+let scene: Scene;
 let program: Program;
-let modelViewMatrix = mat4.create();
+let clock: Clock;
+let WORLD_COORDINATES = 'World Coordinates';
+let CAMERA_COORDINATES = 'Camera Coordinates';
+let coordinates = WORLD_COORDINATES;
+let home = [0, -2, -50];
+let position = [0, -2, -50]
+let rotation = [0, 0, 0];
 let cameraMatrix = mat4.create();
+let modelViewMatrix = mat4.create();
 let projectionMatrix = mat4.create();
 let normalMatrix = mat4.create();
-const WORLD_COORDINATES = 'World Coordinates';
-const CAMERA_COORDINATES = 'Camera Coordinates';
-let coordinates = '';
-let clock: Clock;
-let scene: Scene;
-let home = [0, -2, -50];
-let position = [0, -2, -50];
-let rotation = [0, 0, 0];
 
 function configure(): void {
-  // canvas要素の設定
+  // Configure `canvas`
   const canvas = utils.getCanvas('webgl-canvas');
   utils.autoResizeCanvas(canvas);
 
-  // Webgl2RenderingContextの設定
+  // Configure `gl`
   gl = utils.getGLContext(canvas);
   gl.clearColor(0.9, 0.9, 0.9, 1);
   gl.clearDepth(1);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
 
+  // Configure `clock` which we can subscribe to on every `tick`.
+  // We will discuss this in a later chapter, but it's simply a way to
+  // abstract away the `requestAnimationFrame` we have been using.
   clock = new Clock();
 
-  program = new Program(gl, vertShader, fragShader);
+  // Configure `program`
+  program = new Program(gl, vertexShader, fragmentShader);
 
+  // Uniforms to be set
   const uniforms = [
     'uProjectionMatrix',
     'uModelViewMatrix',
@@ -52,36 +55,41 @@ function configure(): void {
     'uLightAmbient',
     'uLightDiffuse',
     'uLightPosition',
-    'uWireframe'    
-  ] as GLAttribute[];
+    'uWireframe'
+  ] as GLUniform[];
 
+  // Attributes to be set
   const attributes = [
     'aVertexPosition',
     'aVertexNormal',
     'aVertexColor'
   ] as GLAttribute[];
 
-  // uniformとattributeをシェーダーにロード
+  // Load uniforms and attributes
   program.load(attributes, uniforms);
 
-  // シーンの設定
+  // Configure `scene`. We will discuss this in a later chapter, but
+  // this is a simple way to add objects into our scene, rather than
+  // maintaining sets of global arrays as we've done in previous chapters.
   scene = new Scene(gl, program);
 
-  // ライトの設定
-  gl.uniform3fv(program.attLocation.uLightPosition, [0, 120, 120]);
-  gl.uniform4fv(program.attLocation.uLightAmbient, [0.20, 0.20, 0.20, 1]);
-  gl.uniform4fv(program.attLocation.uLightDiffuse, [1, 1, 1, 1]);
+  // Configure lights
+  gl.uniform3fv(program.uniformLocations.uLightPosition, [0, 120, 120]);
+  gl.uniform4fv(program.uniformLocations.uLightAmbient, [0.20, 0.20, 0.20, 1]);
+  gl.uniform4fv(program.uniformLocations.uLightDiffuse, [1, 1, 1, 1]);
 
   initTransforms();
 }
 
-function load() {
+// Load objects into our `scene`
+function load(): void {
   scene.add(new Floor(80, 2));
   scene.add(new Axis(82));
   scene.load('/common/models/geometries/cone3.json', 'cone');
 }
 
-function initTransforms() {
+// Initialize the necessary transforms
+function initTransforms(): void {
   mat4.identity(modelViewMatrix);
   mat4.translate(modelViewMatrix, modelViewMatrix, home);
 
@@ -96,29 +104,33 @@ function initTransforms() {
   mat4.transpose(normalMatrix, normalMatrix);
 }
 
+// Update transforms
 function updateTransforms(): void {
   mat4.perspective(projectionMatrix, 45, gl.canvas.width / gl.canvas.height, 0.1, 1000);
 
   if (coordinates === WORLD_COORDINATES) {
     mat4.identity(modelViewMatrix);
     mat4.translate(modelViewMatrix, modelViewMatrix, position);
-  } else {
+  }
+  else {
     mat4.identity(cameraMatrix);
     mat4.translate(cameraMatrix, cameraMatrix, position);
   }
 }
 
+// Set the matrix uniforms
 function setMatrixUniforms(): void {
   if (coordinates === WORLD_COORDINATES) {
     mat4.invert(cameraMatrix, modelViewMatrix);
-  } else {
+  }
+  else {
     mat4.invert(modelViewMatrix, cameraMatrix);
   }
 
-  gl.uniformMatrix4fv(program.attLocation.uProjectionMatrix, false, projectionMatrix);
-  gl.uniformMatrix4fv(program.attLocation.uModelViewMatrix, false, modelViewMatrix);
+  gl.uniformMatrix4fv(program.uniformLocations.uProjectionMatrix, false, projectionMatrix);
+  gl.uniformMatrix4fv(program.uniformLocations.uModelViewMatrix, false, modelViewMatrix);
   mat4.transpose(normalMatrix, cameraMatrix);
-  gl.uniformMatrix4fv(program.attLocation.uNormalMatrix, false, normalMatrix);
+  gl.uniformMatrix4fv(program.uniformLocations.uNormalMatrix, false, normalMatrix);
 }
 
 function draw(): void {
@@ -129,10 +141,10 @@ function draw(): void {
     updateTransforms();
     setMatrixUniforms();
 
-    // シーンのオブジェクト全てに処理を実行
-    scene.traverse((object: Model) => {
-      gl.uniform4fv(program.attLocation.uMaterialDiffuse, object.diffuse);
-      gl.uniform1i(program.attLocation.uWireframe, object.wireframe);
+    // Iterate over every object in the scene
+    scene.traverse(object => {
+      gl.uniform4fv(program.uniformLocations.uMaterialDiffuse, object.diffuse);
+      gl.uniform1i(program.uniformLocations.uWireframe, Number(object.wireframe));
 
       // Bind
       gl.bindVertexArray(object.vao);
@@ -141,7 +153,8 @@ function draw(): void {
       // Draw
       if (object.wireframe) {
         gl.drawElements(gl.LINES, object.indices.length, gl.UNSIGNED_SHORT, 0);
-      } else {
+      }
+      else {
         gl.drawElements(gl.TRIANGLES, object.indices.length, gl.UNSIGNED_SHORT, 0);
       }
 
@@ -149,14 +162,16 @@ function draw(): void {
       gl.bindVertexArray(null);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-    })
+    });
   }
   catch (error) {
     console.error(error);
   }
 }
 
-function init() {
+function init(): void {
+  generateDOM();
+
   configure();
   load();
   clock.on('tick', draw);
@@ -164,7 +179,9 @@ function init() {
   initControls();
 }
 
-function initControls() {
+window.onload = init;
+
+function initControls(): void {
   // DOM element to change values
   const coordinatesElement = document.getElementById('coordinates');
 
@@ -208,5 +225,65 @@ function initControls() {
   });
 }
 
-// html実行時にinitを実行する
-(() => init())();
+/* 行列の値を表示するDOM要素を生成する */
+function generateDOM(): void {
+  const body = document.getElementById('body');
+
+  // info
+  const divInfo = document.createElement('div');
+  divInfo.setAttribute('id', 'info');
+  
+  const pCoordinates = document.createElement('p');
+  pCoordinates.setAttribute('id', 'coordinates');
+  const tableMatrix = document.createElement('table');
+  tableMatrix.setAttribute('id', 'table');
+  
+  const row1 = document.createElement('tr');
+  const m0 = document.createElement('td');
+  const m4 = document.createElement('td');
+  const m8 = document.createElement('td');
+  const m12 = document.createElement('td');
+  m0.setAttribute('id', 'm0');
+  m4.setAttribute('id', 'm4');
+  m8.setAttribute('id', 'm8');
+  m12.setAttribute('id', 'm12');
+  row1.append(m0, m4, m8, m12);
+
+  const row2 = document.createElement('tr');
+  const m1 = document.createElement('td');
+  const m5 = document.createElement('td');
+  const m9 = document.createElement('td');
+  const m13 = document.createElement('td');
+  m1.setAttribute('id', 'm1');
+  m5.setAttribute('id', 'm5');
+  m9.setAttribute('id', 'm9');
+  m13.setAttribute('id', 'm13');
+  row2.append(m1, m5, m9, m13);
+
+  const row3 = document.createElement('tr');
+  const m2 = document.createElement('td');
+  const m6 = document.createElement('td');
+  const m10 = document.createElement('td');
+  const m14 = document.createElement('td');
+  m2.setAttribute('id', 'm2');
+  m6.setAttribute('id', 'm6');
+  m10.setAttribute('id', 'm10');
+  m14.setAttribute('id', 'm14');
+  row3.append(m2, m6, m10, m14);
+
+  const row4 = document.createElement('tr');
+  const m3 = document.createElement('td');
+  const m7 = document.createElement('td');
+  const m11 = document.createElement('td');
+  const m15 = document.createElement('td');
+  m3.setAttribute('id', 'm3');
+  m7.setAttribute('id', 'm7');
+  m11.setAttribute('id', 'm11');
+  m15.setAttribute('id', 'm15');
+  row4.append(m3, m7, m11, m15);
+
+  tableMatrix.append(row1, row2, row3, row4);
+  divInfo.append(pCoordinates, tableMatrix);
+
+  body.appendChild(divInfo);
+}

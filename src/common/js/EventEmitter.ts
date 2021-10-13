@@ -1,18 +1,21 @@
-export class EventEmitter {
-  events: any;
+// Simple implementation of the pub/sub pattern to decouple components
+type SubscriberCallback = () => void;
+
+class EventEmitter {
+  events: { [key: string]: SubscriberCallback[] };
 
   constructor() {
     this.events = {};
   }
 
-  on = (event, callback) => {
+  on(event: string, callback: SubscriberCallback): void {
     if (!this.events[event]) {
       this.events[event] = [];
     }
     this.events[event].push(callback);
   }
 
-  remove = (event, listener) => {
+  remove(event: string, listener): void {
     if (this.events[event]) {
       const index = this.events[event].indexOf(listener);
       if (~index) {
@@ -21,10 +24,13 @@ export class EventEmitter {
     }
   }
 
-  emit = (event) => {
+  emit(event: string): void {
     const events = this.events[event];
     if (events) {
-      events.forEach((event) => event());
+      events.forEach(event => event());
     }
   }
+
 }
+
+export default EventEmitter;

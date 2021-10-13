@@ -1,65 +1,74 @@
-import { Program } from './Program';
-import { isGLint } from './typeGuards';
+import Program from "./Program";
+import { isGLint } from "./typeGuards";
 import Texture from './Texture';
-import Utils from './Utils';
-import { Model } from './types';
+import Utils from "./Utils";
+import { Model } from "./types";
 
-export class Scene {
+// Manages objects in a 3D scene
+class Scene {
   gl: WebGL2RenderingContext;
   program: Program;
-  objects: Model[];
-  utils = new Utils();
+  objects: any[];
+  utils: Utils;
 
   constructor(gl: WebGL2RenderingContext, program: Program) {
     this.gl = gl;
     this.program = program;
+
     this.objects = [];
+    this.utils = new Utils();
   }
 
-  // TODO: 戻り値
-  get = (alias: string) => {
+  // Find the item with given alias
+  get(alias: string): void {
     return this.objects.find(object => object.alias === alias);
   }
 
-  // TODO: 戻り値
-  load = (filename: string, alias: string, attributes: string | undefined = undefined): Promise<void> => {
+  // Asynchronously load a file
+  load(filename: string, alias: string, attributes: any = undefined): Promise<void> {
     return fetch(filename)
-      .then(res => res.json())
-      .then(object => {
-        object.visible = true;
-        object.alias = alias || object.alias;
-        this.add(object, attributes);
-      })
-      .catch((err) => console.error(err));
+    .then(res => res.json())
+    .then(object => {
+      object.visible = true;
+      object.alias = alias || object.alias;
+      this.add(object, attributes);
+    })
+    .catch((err) => console.error(err, ...arguments));
   }
 
-  // TODO: 実装
-  loadByParts = (path: string, count: number, alias: string | undefined = undefined) => {
-    for (let i = 1; i <= count; ++i) {
+  // Helper function for returning as list of items for a given model
+  loadByParts(path: string, count: number, alias: string): void {
+    for (let i = 1; i <= count; i++) {
       const part = `${path}${i}.json`;
       this.load(part, alias);
     }
   }
 
-  add = (object: any, attributes: string | undefined = undefined) => {
+  // Add object to scene, by settings default and configuring all necessary
+  // buffers and textures
+  add(object: Model, attributes = undefined): void {
     const { gl, program } = this;
 
-    object.diffuse = object?.diffuse || [1, 1, 1, 1];
-    object.Kd = object?.Kd || object?.diffuse.slice(0, 3);
+    // Since we've used both the OBJ convention here (e.g. Ka, Kd, Ks, etc.)
+    // and descriptive terms throughout the book for educational purposes, we will set defaults for
+    // each that doesn't exist to ensure the entire series of demos work.
+    // That being said, it's best to stick to one convention throughout your application.
+    object.diffuse = object.diffuse || [1, 1, 1, 1];
+    object.Kd = object.Kd || object.diffuse.slice(0, 3);
 
-    object.ambient || [0.2, 0.2, 0.2, 1];
-    object.Ka = object?.Ka || object?.ambient.slice(0, 3);
+    object.ambient = object.ambient || [0.2, 0.2, 0.2, 1];
+    object.Ka = object.Ka || object.ambient.slice(0, 3);
 
     object.specular = object.specular || [1, 1, 1, 1];
-    object.Ks = object?.Ks || object?.specular.slice(0, 3);
+    object.Ks = object.Ks || object.specular.slice(0, 3);
 
-    object.specularExponent = object?.specularExponent || 0;
-    object.Ns = object?.Ns || object?.specularExponent;
+    object.specularExponent = object.specularExponent || 0;
+    object.Ns = object.Ns || object.specularExponent;
 
-    object.d = object?.d || 1;
-    object.transparency = object?.transparency || object?.d;
+    object.d = object.d || 1;
+    object.transparency = object.transparency || object.d;
 
-    object.illum = object?.illum || 1;
+    object.illum = object.illum || 1;
 
     // Merge if any attributes are provided
     Object.assign(object, attributes);
@@ -76,62 +85,62 @@ export class Scene {
     gl.bindVertexArray(object.vao);
 
     // Positions
-    if (program.attLocation.aVertexPosition >= 0) {
+    if (program.attributeLocations.aVertexPosition >= 0) {
       const vertexBufferObject = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexBufferObject);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(object.vertices), gl.STATIC_DRAW);
-      if (isGLint(program.attLocation.aVertexPosition)) {
-        gl.enableVertexAttribArray(program.attLocation.aVertexPosition);
-        gl.vertexAttribPointer(program.attLocation.aVertexPosition, 3, gl.FLOAT, false, 0, 0);
+      if (isGLint(program.attributeLocations.aVertexPosition)) {
+        gl.enableVertexAttribArray(program.attributeLocations.aVertexPosition);
+        gl.vertexAttribPointer(program.attributeLocations.aVertexPosition, 3, gl.FLOAT, false, 0, 0);
       }
     }
 
     // Normals
-    if (program.attLocation.aVertexNormal >= 0) {
+    if (program.attributeLocations.aVertexNormal >= 0) {
       const normalBufferObject = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, normalBufferObject);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(
         this.utils.calculateNormals(object.vertices, object.indices)),
         gl.STATIC_DRAW
       );
-      if (isGLint(program.attLocation.aVertexNormal)) {
-        gl.enableVertexAttribArray(program.attLocation.aVertexNormal);
-        gl.vertexAttribPointer(program.attLocation.aVertexNormal, 3, gl.FLOAT, false, 0, 0);
+      if (isGLint(program.attributeLocations.aVertexNormal)) {
+        gl.enableVertexAttribArray(program.attributeLocations.aVertexNormal);
+        gl.vertexAttribPointer(program.attributeLocations.aVertexNormal, 3, gl.FLOAT, false, 0, 0);
       }
     }
 
     // Color Scalars
-    if (object.scalars && program.attLocation.aVertexColor >= 0) {
+    if (object.scalars && program.attributeLocations.aVertexColor >= 0) {
       const colorBufferObject = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, colorBufferObject);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(object.scalars), gl.STATIC_DRAW);
-      if (isGLint(program.attLocation.aVertexColor)) {
-        gl.enableVertexAttribArray(program.attLocation.aVertexColor);
-        gl.vertexAttribPointer(program.attLocation.aVertexColor, 4, gl.FLOAT, false, 0, 0);  
+      if (isGLint(program.attributeLocations.aVertexColor)) {
+        gl.enableVertexAttribArray(program.attributeLocations.aVertexColor);
+        gl.vertexAttribPointer(program.attributeLocations.aVertexColor, 4, gl.FLOAT, false, 0, 0);
       }
     }
 
     // Textures coordinates
-    if (object.textureCoords && program.attLocation.aVertexTextureCoords >= 0) {
+    if (object.textureCoords && program.attributeLocations.aVertexTextureCoords >= 0) {
       const textureBufferObject = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, textureBufferObject);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(object.textureCoords), gl.STATIC_DRAW);
-      if (isGLint(program.attLocation.aVertexTextureCoords)) {
-        gl.enableVertexAttribArray(program.attLocation.aVertexTextureCoords);
-        gl.vertexAttribPointer(program.attLocation.aVertexTextureCoords, 2, gl.FLOAT, false, 0, 0);
+      if (isGLint(program.attributeLocations.aVertexTextureCoords)) {
+        gl.enableVertexAttribArray(program.attributeLocations.aVertexTextureCoords);
+        gl.vertexAttribPointer(program.attributeLocations.aVertexTextureCoords, 2, gl.FLOAT, false, 0, 0);
       }
 
       // Tangents
-      if (program.attLocation.aVertexTangent >= 0) {
+      if (program.attributeLocations.aVertexTangent >= 0) {
         const tangentBufferObject = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, tangentBufferObject);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(
           this.utils.calculateTangents(object.vertices, object.textureCoords, object.indices)),
           gl.STATIC_DRAW
         );
-        if (isGLint(program.attLocation.aVertexTangent)) {
-          gl.enableVertexAttribArray(program.attLocation.aVertexTangent);
-          gl.vertexAttribPointer(program.attLocation.aVertexTangent, 3, gl.FLOAT, false, 0, 0);
+        if (isGLint(program.attributeLocations.aVertexTangent)) {
+          gl.enableVertexAttribArray(program.attributeLocations.aVertexTangent);
+          gl.vertexAttribPointer(program.attributeLocations.aVertexTangent, 3, gl.FLOAT, false, 0, 0);
         }
       }
     }
@@ -150,27 +159,34 @@ export class Scene {
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
   }
 
-  traverse = (cb: any): void => {
-    for(let i = 0; i < this.objects.length; ++i) {
+  // Traverses over every item in the scene
+  traverse(cb: (object: Model, index: number) => void): void {
+    for(let i = 0; i < this.objects.length; i++) {
+      // Break out of the loop as long as any value is returned
       if (cb(this.objects[i], i) !== undefined) break;
     }
   }
 
-  remove = (alias: string): void => {
+  // Removes an item from the scene with a given alias
+  remove(alias: string): void {
     const object = this.get(alias);
     const index = this.objects.indexOf(object);
     this.objects.splice(index, 1);
   }
 
-  renderFirst = (alias: string) => {
+  // Renders an item first
+  renderFirst(alias: string): void {
     const object = this.get(alias);
     const index = this.objects.indexOf(object);
     if (index === 0) return;
 
     this.objects.splice(index, 1);
+    this.objects.splice(0, 0, object);
+    this.printRenderOrder();
   }
 
-  renderLast = (alias: string) => {
+  // Renders an item last
+  renderLast(alias: string): void {
     const object = this.get(alias);
     const index = this.objects.indexOf(object);
     if (index === 0) return;
@@ -180,7 +196,8 @@ export class Scene {
     this.printRenderOrder();
   }
 
-  renderSooner = (alias: string) => {
+  // Pushes an item up the render priority
+  renderSooner(alias: string): void {
     const object = this.get(alias);
     const index = this.objects.indexOf(object);
     if (index === 0) return;
@@ -190,7 +207,8 @@ export class Scene {
     this.printRenderOrder();
   }
 
-  renderLater = (alias: string) => {
+  // Pushes an item down the render priority
+  renderLater(alias: string): void {
     const object = this.get(alias);
     const index = this.objects.indexOf(object);
     if (index === this.objects.length - 1) return;
@@ -200,8 +218,12 @@ export class Scene {
     this.printRenderOrder();
   }
 
-  printRenderOrder= (): void => {
+  // Construct and print a string representing the render order (useful for debugging)
+  printRenderOrder(): void {
     const renderOrder = this.objects.map(object => object.alias).join(' > ');
     console.info('Render Order:', renderOrder);
   }
+
 }
+
+export default Scene;

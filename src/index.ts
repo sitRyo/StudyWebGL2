@@ -4,8 +4,8 @@ import vertShader from './common/shaders/vertexShader.vert';
 import fragShader from './common/shaders/fragmentShader.frag';
 import { isGLint } from './common/js/typeGuards';
 import { mat4 } from 'gl-matrix';
-import { AttLocation, GLAttribute, Model } from './common/js/types';
-import { Program } from './common/js/Program';
+import { AttributeLocations, GLAttribute, Model } from './common/js/types';
+import Program from './common/js/Program';
 
 const utils = new Utils();
 
@@ -59,11 +59,11 @@ function initProgram() {
 
 // Configure lights
 function initLights() {
-  gl.uniform3fv(program.attLocation.uLightPosition, lightPosition);
-  gl.uniform3f(program.attLocation.uLightAmbient, 0.1, 0.1, 0.1);
-  gl.uniform3f(program.attLocation.uMaterialDiffuse, 0.8, 0.8, 0.8);
-  gl.uniform3f(program.attLocation.uMaterialDiffuse, 0.8, 0.8, 0.8);
-  gl.uniform1f(program.attLocation.uShininess, shininess);
+  gl.uniform3fv(program.attributeLocations.uLightPosition, lightPosition);
+  gl.uniform3f(program.attributeLocations.uLightAmbient, 0.1, 0.1, 0.1);
+  gl.uniform3f(program.attributeLocations.uMaterialDiffuse, 0.8, 0.8, 0.8);
+  gl.uniform3f(program.attributeLocations.uMaterialDiffuse, 0.8, 0.8, 0.8);
+  gl.uniform1f(program.attributeLocations.uShininess, shininess);
 }
 
 function draw() {
@@ -76,9 +76,9 @@ function draw() {
   mat4.rotate(modelViewMatrix, modelViewMatrix, 20 * Math.PI / 180, [1, 0, 0]);
   mat4.rotate(modelViewMatrix, modelViewMatrix, angle * Math.PI / 180, [0, 1, 0]);
 
-  gl.uniformMatrix4fv(program.attLocation.uProjectionMatrix, false, projectionMatrix);
-  gl.uniformMatrix4fv(program.attLocation.uModelViewMatrix, false, modelViewMatrix);
-  gl.uniformMatrix4fv(program.attLocation.uNormalMatrix, false, normalMatrix);
+  gl.uniformMatrix4fv(program.attributeLocations.uProjectionMatrix, false, projectionMatrix);
+  gl.uniformMatrix4fv(program.attributeLocations.uModelViewMatrix, false, modelViewMatrix);
+  gl.uniformMatrix4fv(program.attributeLocations.uNormalMatrix, false, normalMatrix);
 
   parts.forEach(part => {
     gl.bindVertexArray(part.vao);
@@ -120,18 +120,18 @@ function load() {
       const vertexBufferObject = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexBufferObject);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(part.vertices), gl.STATIC_DRAW);
-      if (isGLint(program.attLocation.aVertexPosition)) {
-        gl.enableVertexAttribArray(program.attLocation.aVertexPosition);
-        gl.vertexAttribPointer(program.attLocation.aVertexPosition, 3, gl.FLOAT, false, 0, 0);
+      if (isGLint(program.attributeLocations.aVertexPosition)) {
+        gl.enableVertexAttribArray(program.attributeLocations.aVertexPosition);
+        gl.vertexAttribPointer(program.attributeLocations.aVertexPosition, 3, gl.FLOAT, false, 0, 0);
       }
 
       // 法線
       const normalBufferObject = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, normalBufferObject);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(utils.calculateNormals(part.vertices, part.indices)), gl.STATIC_DRAW);
-      if (isGLint(program.attLocation.aVertexNormal)) {
-        gl.enableVertexAttribArray(program.attLocation.aVertexNormal);
-        gl.vertexAttribPointer(program.attLocation.aVertexNormal, 3, gl.FLOAT, false, 0, 0);
+      if (isGLint(program.attributeLocations.aVertexNormal)) {
+        gl.enableVertexAttribArray(program.attributeLocations.aVertexNormal);
+        gl.vertexAttribPointer(program.attributeLocations.aVertexNormal, 3, gl.FLOAT, false, 0, 0);
       }
 
       // インデックス
@@ -164,7 +164,7 @@ function initControls() {
   utils.configureControls({
     'Car Color': {
       value: [255, 255, 255],
-      onChange: v => gl.uniform3f(program.attLocation.uMaterialDiffuse, ...utils.normalizeColor(v))
+      onChange: v => gl.uniform3f(program.attributeLocations.uMaterialDiffuse, ...utils.normalizeColor(v))
     },
     Background: {
       value: utils.denormalizeColor(clearColor),
@@ -173,7 +173,7 @@ function initControls() {
     Shininess: {
       value: shininess,
       min: 1, max: 50, step: 0.1,
-      onChange: value => gl.uniform1f(program.attLocation.uShininess, value)
+      onChange: value => gl.uniform1f(program.attributeLocations.uShininess, value)
     },
     Distance: {
       value: distance,
@@ -186,7 +186,7 @@ function initControls() {
         value: lightPosition[i],
         min: -1000, max: 1000, step: -0.1,
         onChange(v, state) {
-          gl.uniform3fv(program.attLocation.uLightPosition, [
+          gl.uniform3fv(program.attributeLocations.uLightPosition, [
             state['Translate X'],
             state['Translate Y'],
             state['Translate Z']

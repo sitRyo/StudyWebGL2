@@ -1,4 +1,5 @@
-export class Floor {
+// Visualize a floor on the screen
+class Floor {
   alias: string;
   dimension: number;
   lines: number;
@@ -7,8 +8,9 @@ export class Floor {
   wireframe: boolean;
   visible: boolean;
 
-  constructor(dimension: number, lines: number) {
+  constructor(dimension = 50, lines = 5) {
     this.alias = 'floor';
+
     this.dimension = dimension;
     this.lines = lines;
     this.vertices = [];
@@ -16,11 +18,11 @@ export class Floor {
 
     this.wireframe = true;
     this.visible = true;
-    
+
     this.build(this.dimension, this.lines);
   }
 
-  build = (dimension: number, lines: number) => {
+  build(dimension: number, lines: number): void {
     if (dimension) {
       this.dimension = dimension;
     }
@@ -33,7 +35,7 @@ export class Floor {
     const v: number[] = [];
     const i: number[] = [];
 
-    for (let l = 0; l <= this.lines; ++l) {
+    for (let l = 0; l <= this.lines; l++) {
       v[6 * l] = -this.dimension;
       v[6 * l + 1] = 0;
       v[6 * l + 2] = -this.dimension + (l * inc);
@@ -60,3 +62,5 @@ export class Floor {
     this.indices = i;
   }
 }
+
+export default Floor;

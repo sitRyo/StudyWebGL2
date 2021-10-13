@@ -20,7 +20,8 @@ void main(void) {
   // If wireframe is enabled, set color to the diffuse property exclusing lights
   if (uWireframe) {
     vFinalColor = uMaterialDiffuse;
-  } else {
+  }
+  else {
     // Normal
     vec3 N = vec3(uNormalMatrix * vec4(aVertexNormal, 0.0));
     // Normalized light position
@@ -38,7 +39,7 @@ void main(void) {
 
     // Set varying to be used inside of fragment shader
     vFinalColor = vec4(vec3(Ia + Id), 1.0);
-  }
+    }
 
   gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aVertexPosition, 1.0);
 }

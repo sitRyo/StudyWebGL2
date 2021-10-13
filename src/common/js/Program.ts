@@ -1,17 +1,19 @@
-import { AttLocation, GLAttribute } from "./types";
+import { AttributeLocations, GLAttribute, GLUniform, UniformLocations } from "./types";
 import Utils from "./Utils";
 
-export class Program {
+class Program {
   utils: Utils;
   gl: WebGL2RenderingContext;
   program: WebGLProgram;
-  attLocation: AttLocation;
+  attributeLocations: AttributeLocations;
+  uniformLocations: UniformLocations;
 
   constructor(gl: WebGL2RenderingContext, vertShaderRawString: string, fragShaderRawString: string) {
     this.utils = new Utils();
     this.gl = gl;
     this.program = gl.createProgram();
-    this.attLocation = {};
+    this.attributeLocations = {};
+    this.uniformLocations = {};
 
     if (!(vertShaderRawString && fragShaderRawString)) {
       console.error('No shader IDs were provided');
@@ -34,7 +36,7 @@ export class Program {
     this.gl.useProgram(this.program);
   }
 
-  load = (attributes: GLAttribute[], uniforms: GLAttribute[]) => {
+  load = (attributes: GLAttribute[], uniforms: GLUniform[]) => {
     this.useProgram();
     this.setAttributeLocations(attributes);
     this.setUniformLocations(uniforms);
@@ -43,13 +45,13 @@ export class Program {
   setAttributeLocations = (attributes: GLAttribute[]): void => {
     attributes.forEach(attribute => {
       console.log(this);
-      this.attLocation[attribute] = this.gl.getAttribLocation(this.program, attribute);
+      this.attributeLocations[attribute] = this.gl.getAttribLocation(this.program, attribute);
     });
   }
 
-  setUniformLocations = (uniforms: GLAttribute[]): void => {
+  setUniformLocations = (uniforms: GLUniform[]): void => {
     uniforms.forEach(uniform => {
-      this[uniform] = this.gl.getUniformLocation(this.program, uniform);
+      this.uniformLocations[uniform] = this.gl.getUniformLocation(this.program, uniform);
     });
   }
 
@@ -57,3 +59,5 @@ export class Program {
     return this.gl.getUniform(this.program, uniformLocation);
   }
 }
+
+export default Program;
