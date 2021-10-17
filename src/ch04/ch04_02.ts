@@ -176,7 +176,7 @@ function draw(): void {
 }
 
 export function init(): void {
-  // generateDOM();
+  generateDOM();
 
   configure();
   load();
