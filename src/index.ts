@@ -1,3 +1,3 @@
-import { init } from './ch04/ch04_01';
+import { init } from './ch04/ch04_02';
 
 init();
