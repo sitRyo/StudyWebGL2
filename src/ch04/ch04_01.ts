@@ -169,7 +169,7 @@ function draw(): void {
   }
 }
 
-function init(): void {
+export function init(): void {
   generateDOM();
 
   configure();
@@ -178,8 +178,6 @@ function init(): void {
 
   initControls();
 }
-
-window.onload = init;
 
 function initControls(): void {
   // DOM element to change values
