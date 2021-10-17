@@ -182,24 +182,24 @@ class Utils {
   }
 
   calculateTangents = (vs, tc, ind): number[] => {
-    const tangents: number[][] = [];
+    const tangents: vec3[] = [];
 
     for (let i = 0; i < vs.length / 3; i++) {
       tangents[i] = [0, 0, 0];
     }
 
-    let a = [0, 0, 0];
-    let b = [0, 0, 0];
-    let triTangent = [0, 0, 0];
+    let a: vec3 = [0, 0, 0];
+    let b: vec3 = [0, 0, 0];
+    let triTangent: vec3 = [0, 0, 0];
 
     for (let i = 0; i < ind.length; i += 3) {
       const i0 = ind[i];
       const i1 = ind[i + 1];
       const i2 = ind[i + 2];
 
-      const pos0 = [vs[i0 * 3], vs[i0 * 3 + 1], vs[i0 * 3 + 2]];
-      const pos1 = [vs[i1 * 3], vs[i1 * 3 + 1], vs[i1 * 3 + 2]];
-      const pos2 = [vs[i2 * 3], vs[i2 * 3 + 1], vs[i2 * 3 + 2]];
+      const pos0: vec3 = [vs[i0 * 3], vs[i0 * 3 + 1], vs[i0 * 3 + 2]];
+      const pos1: vec3 = [vs[i1 * 3], vs[i1 * 3 + 1], vs[i1 * 3 + 2]];
+      const pos2: vec3 = [vs[i2 * 3], vs[i2 * 3 + 1], vs[i2 * 3 + 2]];
 
       const tex0 = [tc[i0 * 2], tc[i0 * 2 + 1]];
       const tex1 = [tc[i1 * 2], tc[i1 * 2 + 1]];

@@ -1,4 +1,4 @@
-import { mat4, vec3 } from 'gl-matrix';
+import { mat4, ReadonlyVec3, vec3 } from 'gl-matrix';
 import Utils from '../common/js/Utils';
 import Clock from '../common/js/Clock';
 import Program from '../common/js/Program';
@@ -18,9 +18,9 @@ let clock: Clock;
 let WORLD_COORDINATES = 'World Coordinates';
 let CAMERA_COORDINATES = 'Camera Coordinates';
 let coordinates = WORLD_COORDINATES;
-let home = [0, -2, -50];
-let position = [0, -2, -50]
-let rotation = [0, 0, 0];
+let home: vec3 = [0, -2, -50];
+let position: vec3 = [0, -2, -50]
+let rotation: vec3 = [0, 0, 0];
 let cameraMatrix = mat4.create();
 let modelViewMatrix = mat4.create();
 let projectionMatrix = mat4.create();
