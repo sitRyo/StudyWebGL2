@@ -37,7 +37,7 @@ class Scene {
   }
 
   // Helper function for returning as list of items for a given model
-  loadByParts(path: string, count: number, alias: string): void {
+  loadByParts(path: string, count: number, alias: string | undefined = undefined): void {
     for (let i = 1; i <= count; i++) {
       const part = `${path}${i}.json`;
       this.load(part, alias);
