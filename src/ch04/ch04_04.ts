@@ -8,25 +8,21 @@ import Axis from '../common/js/Axis';
 import vertexShader from '../common/shaders/ch04/01_vertexShader.vert';
 import fragmentShader from '../common/shaders/ch04/01_fragmentShader.frag';
 import { GLAttribute, GLUniform } from '../common/js/types';
+import Camera, { CameraTypes } from '../common/js/Camera';
+import Controls from '../common/js/Controls';
 
 const utils = new Utils();
 
 let gl: WebGL2RenderingContext;
+let camera: Camera;
 let scene: Scene;
 let program: Program;
 let clock: Clock;
-let WORLD_COORDINATES = 'World Coordinates';
-let CAMERA_COORDINATES = 'Camera Coordinates';
-let coordinates = WORLD_COORDINATES;
-let home: vec3 = [0, -2, -50];
-let position: vec3 = [0, -2, -50]
-let rotation: vec3 = [0, 0, 0];
-let cameraMatrix = mat4.create();
 let modelViewMatrix = mat4.create();
 let projectionMatrix = mat4.create();
 let normalMatrix = mat4.create();
 
-function configure(): void {
+function configure() {
   // Configure `canvas`
   const canvas = utils.getCanvas('webgl-canvas');
   utils.autoResizeCanvas(canvas);
@@ -34,7 +30,7 @@ function configure(): void {
   // Configure `gl`
   gl = utils.getGLContext(canvas);
   gl.clearColor(0.9, 0.9, 0.9, 1);
-  gl.clearDepth(1);
+  gl.clearDepth(100);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
 
@@ -73,6 +69,13 @@ function configure(): void {
   // maintaining sets of global arrays as we've done in previous chapters.
   scene = new Scene(gl, program);
 
+  // Configure `camera` and set it to be in tracking mode
+  camera = new Camera(CameraTypes.TRACKING_TYPE);
+  camera.goHome([0, 2, 50]);
+
+  // Configure controls by allowing user driven events to move camera around
+  new Controls(camera, canvas);
+
   // Configure lights
   gl.uniform3fv(program.uniformLocations.uLightPosition, [0, 120, 120]);
   gl.uniform4fv(program.uniformLocations.uLightAmbient, [0.20, 0.20, 0.20, 1]);
@@ -82,22 +85,17 @@ function configure(): void {
 }
 
 // Load objects into our `scene`
-function load(): void {
+function load() {
   scene.add(new Floor(80, 2));
   scene.add(new Axis(82));
   scene.load('/common/models/geometries/cone3.json', 'cone');
 }
 
 // Initialize the necessary transforms
-function initTransforms(): void {
-  mat4.identity(modelViewMatrix);
-  mat4.translate(modelViewMatrix, modelViewMatrix, home);
-
-  mat4.identity(cameraMatrix);
-  mat4.invert(cameraMatrix, modelViewMatrix);
-
+function initTransforms() {
+  modelViewMatrix = camera.getViewTransform();
   mat4.identity(projectionMatrix);
-
+  updateTransforms();
   mat4.identity(normalMatrix);
   mat4.copy(normalMatrix, modelViewMatrix);
   mat4.invert(normalMatrix, normalMatrix);
@@ -105,43 +103,19 @@ function initTransforms(): void {
 }
 
 // Update transforms
-function updateTransforms(): void {
+function updateTransforms() {
   mat4.perspective(projectionMatrix, 45, gl.canvas.width / gl.canvas.height, 0.1, 1000);
-
-  if (coordinates === WORLD_COORDINATES) {
-    mat4.identity(modelViewMatrix);
-    mat4.translate(modelViewMatrix, modelViewMatrix, position);
-    mat4.rotateX(modelViewMatrix, modelViewMatrix, rotation[0] * Math.PI / 180);
-    mat4.rotateY(modelViewMatrix, modelViewMatrix, rotation[1] * Math.PI / 180);
-    mat4.rotateZ(modelViewMatrix, modelViewMatrix, rotation[2] * Math.PI / 180);
-  }
-  else {
-    mat4.identity(cameraMatrix);
-    mat4.translate(cameraMatrix, cameraMatrix, position);
-    mat4.rotateX(cameraMatrix, cameraMatrix, rotation[0] * Math.PI / 180);
-    mat4.rotateY(cameraMatrix, cameraMatrix, rotation[1] * Math.PI / 180);
-    mat4.rotateZ(cameraMatrix, cameraMatrix, rotation[2] * Math.PI / 180);
-  }
 }
 
 // Set the matrix uniforms
-function setMatrixUniforms(): void {
-  if (coordinates === WORLD_COORDINATES) {
-    mat4.invert(cameraMatrix, modelViewMatrix);
-  }
-  else {
-    mat4.invert(modelViewMatrix, cameraMatrix);
-  }
-
+function setMatrixUniforms() {
+  gl.uniformMatrix4fv(program.uniformLocations.uModelViewMatrix, false, camera.getViewTransform());
   gl.uniformMatrix4fv(program.uniformLocations.uProjectionMatrix, false, projectionMatrix);
-  gl.uniformMatrix4fv(program.uniformLocations.uModelViewMatrix, false, modelViewMatrix);
-   // カメラ行列はモデルビュー行列の転置。
-   // 法線行列はモデルビュー行列の逆行列の転置なので、カメラ行列の転置で表される。
-  mat4.transpose(normalMatrix, cameraMatrix);
+  mat4.transpose(normalMatrix, camera.matrix);
   gl.uniformMatrix4fv(program.uniformLocations.uNormalMatrix, false, normalMatrix);
 }
 
-function draw(): void {
+function draw() {
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -177,9 +151,7 @@ function draw(): void {
   }
 }
 
-export function init(): void {
-  // generateDOM();
-
+export function init() {
   configure();
   load();
   clock.on('tick', draw);
@@ -187,59 +159,55 @@ export function init(): void {
   initControls();
 }
 
-function initControls(): void {
-  // DOM element to change values
-  const coordinatesElement = document.getElementById('coordinates');
-
+function initControls() {
   utils.configureControls({
-    Coordinates: {
-      value: coordinates,
-      options: [WORLD_COORDINATES, CAMERA_COORDINATES],
+    'Camera Type': {
+      value: camera.type,
+      options: [CameraTypes.TRACKING_TYPE, CameraTypes.ORBITING_TYPE],
       onChange: v => {
-        coordinates = v;
-        coordinatesElement.innerText = coordinates;
-        vec3.copy(home, position);
-        rotation = [0, 0, 0];
-        if (coordinates === CAMERA_COORDINATES) {
-          vec3.negate(position, position);
-        }
+        camera.goHome();
+        camera.setType(v);
       }
     },
-    ...['Translate X', 'Translate Y', 'Translate Z'].reduce((result, name, i) => {
-      result[name] = {
-        value: position[i],
-        min: -100, max: 100, step: -0.1,
-        onChange(v, state) {
-          position = [
-            state['Translate X'],
-            state['Translate Y'],
-            state['Translate Z']
-          ];
-        }
-      };
-      return result;
-    }, {}),
-    ...['Rotate X', 'Rotate Y', 'Rotate Z'].reduce((result, name, i) => {
-      result[name] = {
-        value: rotation[i],
+    Dolly: {
+      value: 0,
+      min: -100, max: 100, step: 0.1,
+      onChange: v => camera.dolly(v)
+    },
+    Position: {
+      ...['X', 'Y', 'Z'].reduce((result, name, i) => {
+        result[name] = {
+          value: camera.position[i],
+          min: -100, max: 100, step: 0.1,
+          onChange: (v, state) => {
+            camera.setPosition([
+              state.X,
+              state.Y,
+              state.Z
+            ]);
+          }
+        };
+        return result;
+      }, {}),
+    },
+    Rotation: {
+      Elevation: {
+        value: camera.elevation,
         min: -180, max: 180, step: 0.1,
-        onChange(v, state) {
-          rotation = [
-            state['Rotate X'],
-            state['Rotate Y'],
-            state['Rotate Z']
-          ];
-        }
-      };
-      return result;
-    }, {}),
+        onChange: v => camera.setElevation(v)
+      },
+      Azimuth: {
+        value: camera.azimuth,
+        min: -180, max: 180, step: 0.1,
+        onChange: v => camera.setAzimuth(v)
+      }
+    },
+    'Go Home': () => camera.goHome()
   });
 
   // On every `tick` (i.e. requestAnimationFrame cycle), invoke callback
   clock.on('tick', () => {
-    // Update the values in the DOM
-    const matrix = (coordinates === WORLD_COORDINATES) ? modelViewMatrix : cameraMatrix;
-    matrix.forEach((data, i) => {
+    camera.matrix.forEach((data, i) =>  {
       document.getElementById(`m${i}`).innerText = data.toFixed(1);
     });
   });

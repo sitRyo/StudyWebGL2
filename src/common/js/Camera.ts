@@ -1,6 +1,6 @@
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix';
 
-const CameraTypes = {
+export const CameraTypes = {
   ORBITING_TYPE: 'ORBITING_TYPE' as 'ORBITING_TYPE',
   TRACKING_TYPE: 'TRACKING_TYPE' as 'TRACKING_TYPE',
 }
@@ -62,7 +62,7 @@ class Camera {
   }
 
   // Position the camera back home
-  goHome(home): void {
+  goHome(home: vec3 | undefined = undefined): void {
     if (home) {
       this.home = home;
     }
