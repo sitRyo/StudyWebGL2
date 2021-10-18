@@ -5,7 +5,7 @@ import Program from '../common/js/Program';
 import Scene from '../common/js/Scene';
 import Floor from '../common/js/Floor';
 import Axis from '../common/js/Axis';
-import vertexShader from '../common/shaders/ch04/01_vertexShader.vert';
+import vertexShader from '../common/shaders/ch04/05_vertexShader.vert';
 import fragmentShader from '../common/shaders/ch04/01_fragmentShader.frag';
 import { GLAttribute, GLUniform } from '../common/js/types';
 import Camera, { CameraTypes } from '../common/js/Camera';
@@ -21,6 +21,7 @@ let clock: Clock;
 let modelViewMatrix = mat4.create();
 let projectionMatrix = mat4.create();
 let normalMatrix = mat4.create();
+let fixedLight = true;
 
 function configure() {
   // Configure `canvas`
@@ -80,6 +81,7 @@ function configure() {
   gl.uniform3fv(program.uniformLocations.uLightPosition, [0, 0, 2120]);
   gl.uniform4fv(program.uniformLocations.uLightAmbient, [0.10, 0.10, 0.10, 1]);
   gl.uniform4fv(program.uniformLocations.uLightDiffuse, [0.7, 0.7, 0.7, 1]);
+  gl.uniform1i(program.uniformLocations.uFixedLight, Number(fixedLight));
 
   initTransforms();
 }
@@ -201,6 +203,10 @@ function initControls() {
         min: -180, max: 180, step: 0.1,
         onChange: v => camera.setAzimuth(v)
       }
+    },
+    'Static Light Position': {
+      value: fixedLight,
+      onChange: v => gl.uniform1i(program.uniformLocations.uFixedLight, v),
     },
     'Go Home': () => camera.goHome()
   });
