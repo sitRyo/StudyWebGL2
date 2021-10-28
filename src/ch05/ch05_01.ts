@@ -27,7 +27,7 @@ let spherePosition = 0;
 let conePosition = 0;
 let frequency = 5;
 
-function configure() {
+function configure(): void {
   // Configure `canvas`
   const canvas = utils.getCanvas('webgl-canvas');
   utils.autoResizeCanvas(canvas);
@@ -87,14 +87,14 @@ function configure() {
 }
 
 // Load objects into our scene
-function load() {
+function load(): void {
   scene.add(new Floor(80, 2));
   scene.add(new Axis(82));
   scene.load('/common/models/geometries/sphere2.json', 'sphere');
   scene.load('/common/models/geometries/cone3.json', 'cone');
 }
 
-function draw() {
+function draw(): void {
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -152,7 +152,7 @@ function draw() {
 }
 
 // Update object positions
-function animate() {
+function animate(): void {
   spherePosition += dxSphere;
 
   if (spherePosition >= 30 || spherePosition <= -30) {
@@ -167,7 +167,7 @@ function animate() {
   draw();
 }
 
-function onFrame() {
+function onFrame(): void {
   elapsedTime = (new Date).getTime() - initialTime;
   if (elapsedTime < frequency) return;
 
@@ -180,12 +180,12 @@ function onFrame() {
   initialTime = (new Date).getTime();
 }
 
-function render() {
+function render(): void {
   initialTime = new Date().getTime();
   setInterval(onFrame, frequency / 1000);
 }
 
-export function init() {
+export function init(): void {
   configure();
   load();
   render();
@@ -193,9 +193,7 @@ export function init() {
   initControls();
 }
 
-// window.onload = init;
-
-function initControls() {
+function initControls(): void {
   utils.configureControls({
     'Camera Type': {
       value: camera.type,
