@@ -51,7 +51,7 @@ class BouncingBall {
     this.color = [Math.random(), Math.random(), Math.random(), 1];
   }
 
-  update(time): void {
+  update(time: number): void {
     const t = time - this.bouncingTime;
     const h = this.H0 + (this.V0 * t) - (0.5 * gravity * t * t);
 
