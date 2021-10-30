@@ -1,2 +1,5 @@
 node_modules
 dist
+
+# サンプル以外のファイル群
+src/practice/*
