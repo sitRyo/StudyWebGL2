@@ -12,6 +12,9 @@
 // import { init } from './ch05/ch05_03;
 // import { init } from './ch05/ch05_04';
 // import { init } from './ch05/ch05_05';
-import { init } from './ch05/ch05_06';
+// import { init } from './ch05/ch05_06';
+
+/* ch06 */
+import { init } from './ch06/ch06_01';
 
 init();
