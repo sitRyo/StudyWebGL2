@@ -31,6 +31,7 @@ export interface Model {
   wireframe?: boolean;
   image?: string;
   texture?: WebGLTexture;
+  hidden?: boolean;
 }
 
 // シェーダーに渡すattributeのリテラル型定義
@@ -38,7 +39,7 @@ export const AttributeKind = strEnum(['aVertexPosition', 'aVertexNormal', 'aVert
 export type GLAttribute = keyof typeof AttributeKind;
 export type AttributeLocations = { [key in GLAttribute]?: GLint | WebGLUniformLocation | null };
 
-export const UniformKind = strEnum(['uProjectionMatrix', 'uModelViewMatrix', 'uNormalMatrix', 'uMaterialAmbient', 'uMaterialDiffuse', 'uMaterialSpecular', 'uShininess', 'uLightAmbient', 'uLightDiffuse', 'uLightSpecular', 'uLightDirection', 'uLightPosition', 'uWireframe', 'uFixedLight', 'uUpdateLight', 'uPerVertexColor', 'uTranslation', 'uTranslate']);
+export const UniformKind = strEnum(['uProjectionMatrix', 'uModelViewMatrix', 'uNormalMatrix', 'uMaterialAmbient', 'uMaterialDiffuse', 'uMaterialSpecular', 'uShininess', 'uLightAmbient', 'uLightDiffuse', 'uLightSpecular', 'uLightDirection', 'uLightPosition', 'uWireframe', 'uFixedLight', 'uUpdateLight', 'uPerVertexColor', 'uTranslation', 'uTranslate', 'uAlpha', 'uUseVertexColor', 'uUseLambert']);
 export type GLUniform = keyof typeof UniformKind
 export type UniformLocations = { [key in GLUniform]?: WebGLUniformLocation | null };
 

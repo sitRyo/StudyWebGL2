@@ -20,7 +20,7 @@ class Scene {
   }
 
   // Find the item with given alias
-  get(alias: string): void {
+  get(alias: string): Model {
     return this.objects.find(object => object.alias === alias);
   }
 
