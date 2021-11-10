@@ -13,6 +13,7 @@ $ npm start
 
 参考
 * [最新版TypeScript+webpack 5の環境構築まとめ(React, Vue.js, Three.jsのサンプル付き)](https://ics.media/entry/16329/)
+* [最新版で学ぶwebpack 5入門 スタイルシート(CSS/Sass)を取り込む方法](https://ics.media/entry/17376/)
 
 ## シェーダー
 頂点シェーダーとフラグメントシェーダーはwebpackを利用して, typescript内で文字列として取得できるようにしている。  
