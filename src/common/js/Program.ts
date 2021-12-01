@@ -55,7 +55,8 @@ class Program {
     });
   }
 
-  getUniform = (uniformLocation: string): WebGLUniformLocation => {
+  // gl.getUniform has any return type.
+  getUniform = (uniformLocation: WebGLUniformLocation): any => {
     return this.gl.getUniform(this.program, uniformLocation);
   }
 }

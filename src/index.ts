@@ -1,5 +1,5 @@
 /* ch03 */
-import { init } from './ch03/ch03_03';
+// import { init } from './ch03/ch03_03';
 
 /* ch04 */
 // import { init } from './ch04/ch04_01';
@@ -19,5 +19,6 @@ import { init } from './ch03/ch03_03';
 
 /* ch06 */
 // import { init } from './ch06/ch06_01';
+import { init } from './ch06/ch06_02';
 
 init();
