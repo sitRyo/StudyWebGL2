@@ -19,6 +19,7 @@
 
 /* ch06 */
 // import { init } from './ch06/ch06_01';
-import { init } from './ch06/ch06_02';
+// import { init } from './ch06/ch06_02';
+import { init } from './ch06/ch06_03';
 
 init();
