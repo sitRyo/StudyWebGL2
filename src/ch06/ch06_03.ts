@@ -23,6 +23,7 @@ let clock: Clock;
 let lightCutOff = 0.5;
 let redLightPosition: vec3 = [0, 7, 3];
 let greenLightPosition: vec3 = [2.5, 3, 3];
+let blueLightPosition: vec3 = [-2.5, 3, 3];
 
 function configure() {
   const canvas = utils.getCanvas('webgl-canvas');
@@ -86,7 +87,7 @@ function configure() {
   greenLight.setDiffuse([0, 1, 0, 1]);
 
   const blueLight = new Light('blueLight');
-  blueLight.setPosition([-2.5, 3, 3]);
+  blueLight.setPosition(blueLightPosition);
   blueLight.setDiffuse([0, 0, 1, 1]);
 
   gl.uniform3fv(program.uniformLocations.uPositionRedLight, redLight.position);
@@ -199,6 +200,11 @@ function initControls() {
         position: greenLightPosition,
         uniform: program.uniformLocations.uPositionGreenLight
       },
+      {
+        name: 'Blue Light',
+        position: blueLightPosition,
+        uniform: program.uniformLocations.uPositionBlueLight,
+      }
     ].reduce((controls, light) => {
       const positionKeys = [
         `X - ${light.name}`,
