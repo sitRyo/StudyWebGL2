@@ -38,7 +38,7 @@ export class Light {
   }
 }
 
-export class LightManager {
+export class LightsManager {
   list: Light[];
 
   constructor() {
@@ -49,15 +49,14 @@ export class LightManager {
     this.list.push(light);
   }
 
-  // type = kind of attribute, uniform types
-  getArray(type: any): any[] {
+  getArray(type: string): number[] {
     return this.list.reduce((result, light) => {
       result = result.concat(light[type]);
       return result;
     }, [])
   }
 
-  get(index: number): Light {
+  get(index: number | string): Light {
     if (typeof index === 'string') {
       return this.list.find(light => light.id === index);
     } else {
