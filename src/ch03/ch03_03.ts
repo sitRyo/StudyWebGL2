@@ -1,4 +1,4 @@
-import { mat4 } from 'gl-matrix';
+import { mat4, vec4 } from 'gl-matrix';
 import Utils from '../common/js/Utils';
 import vertShader from '../common/shaders/ch03/03_vertexShader.vert';
 import fragShader from '../common/shaders/ch03/03_fragmentShader.frag';
@@ -17,12 +17,12 @@ let lastTime;
 let wireframe = false;
 let angle = 0;
 let shininess = 10;
-let clearColor = [0.9, 0.9, 0.9, 1] as [number, number, number, number];
-let lightColor = [1, 1, 1, 1];
+let clearColor = [0.9, 0.9, 0.9, 1] as vec4;
+let lightColor = [1, 1, 1, 1] as vec4;
 let lightAmbient = [0.03, 0.03, 0.03, 1];
 let lightSpecular = [1, 1, 1, 1];
 let lightDirection = [-0.25, -0.25, -0.25];
-let materialDiffuse = [46 / 256, 99 / 256, 191 / 256, 1];
+let materialDiffuse = [46 / 256, 99 / 256, 191 / 256, 1] as vec4;
 let materialAmbient = [1, 1, 1, 1];
 let materialSpecular = [1, 1, 1, 1];
 
@@ -38,7 +38,7 @@ function initProgram() {
 
   // Configure `gl`
   gl = utils.getGLContext(canvas);
-  gl.clearColor(...clearColor);
+  gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
   gl.clearDepth(100);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
@@ -244,7 +244,7 @@ function initControls() {
     },
     Background: {
       value: utils.denormalizeColor(clearColor),
-      onChange: v => gl.clearColor(...utils.normalizeColor(v), 1)
+      onChange: v => gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3])
     },
     Wireframe: {
       value: wireframe,
