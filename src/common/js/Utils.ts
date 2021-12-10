@@ -1,6 +1,5 @@
 import { GUI, GUIParams } from 'dat.gui';
-import { oVec3 } from './types';
-import { vec3 } from 'gl-matrix';
+import { vec3, vec4 } from 'gl-matrix';
 
 export interface ConfigureControl {
   RenderingMode: {
@@ -172,13 +171,12 @@ class Utils {
     return ns;
   }
 
-  // colorはvec4とかにできればいいんだろうなあと思う
-  normalizeColor = (color: number[]): oVec3 => {
-    return color.map(c => c / 255) as oVec3;
+  normalizeColor = <T extends vec3 | vec4>(color: T): T => {
+    return color.map(c => c / 255) as T;
   }
 
-  denormalizeColor = (color: number[]): oVec3 => {
-    return color.map(c => c * 255) as oVec3;
+  denormalizeColor = <T extends vec3 | vec4>(color: T): T => {
+    return color.map(c => c * 255) as T;
   }
 
   calculateTangents = (vs, tc, ind): number[] => {

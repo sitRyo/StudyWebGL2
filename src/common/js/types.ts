@@ -42,5 +42,3 @@ export type AttributeLocations = { [key in GLAttribute]?: GLint | null };
 export const UniformKind = strEnum(['uProjectionMatrix', 'uModelViewMatrix', 'uNormalMatrix', 'uMaterialAmbient', 'uMaterialDiffuse', 'uMaterialSpecular', 'uShininess', 'uLightAmbient', 'uLightDiffuse', 'uLightSpecular', 'uLightDirection', 'uLightPosition', 'uWireframe', 'uFixedLight', 'uUpdateLight', 'uPerVertexColor', 'uTranslation', 'uTranslate', 'uAlpha', 'uUseVertexColor', 'uUseLambert', 'uDiffuseRedLight', 'uDiffuseGreenLight', 'uDiffuseBlueLight', 'uPositionRedLight', 'uPositionGreenLight', 'uPositionBlueLight', 'uLightSource', 'uCutOff']);
 export type GLUniform = keyof typeof UniformKind
 export type UniformLocations = { [key in GLUniform]?: WebGLUniformLocation | null };
-
-export type oVec3 = [number, number, number];
