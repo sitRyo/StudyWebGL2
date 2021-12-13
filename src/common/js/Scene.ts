@@ -25,7 +25,7 @@ class Scene {
   }
 
   // Asynchronously load a file
-  load(filename: string, alias: string, attributes: any = undefined): Promise<void> {
+  load(filename: string, alias?: string, attributes?: any): Promise<void> {
     return fetch(filename)
     .then(res => res.json())
     .then(object => {
@@ -37,7 +37,7 @@ class Scene {
   }
 
   // Helper function for returning as list of items for a given model
-  loadByParts(path: string, count: number, alias: string | undefined = undefined): void {
+  loadByParts(path: string, count: number, alias?: string): void {
     for (let i = 1; i <= count; i++) {
       const part = `${path}${i}.json`;
       this.load(part, alias);
@@ -46,7 +46,7 @@ class Scene {
 
   // Add object to scene, by settings default and configuring all necessary
   // buffers and textures
-  add(object: Model, attributes = undefined): void {
+  add(object: Model, attributes?: any): void {
     const { gl, program } = this;
 
     // Since we've used both the OBJ convention here (e.g. Ka, Kd, Ks, etc.)

@@ -62,7 +62,7 @@ class Camera {
   }
 
   // Position the camera back home
-  goHome(home: vec3 | undefined = undefined): void {
+  goHome(home?: vec3): void {
     if (home) {
       this.home = home;
     }
