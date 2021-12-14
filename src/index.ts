@@ -32,6 +32,7 @@
 // import { init } from './ch06/ch06_12';
 
 /* ch07 */
-import { init } from './ch07/ch07_01';
+// import { init } from './ch07/ch07_01';
+import { init } from './ch07/ch07_02';
 
 init();
