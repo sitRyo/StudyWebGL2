@@ -4,7 +4,7 @@ class Texture {
   glTexture: WebGLTexture;
   image: HTMLImageElement;
 
-  constructor(gl: WebGL2RenderingContext, source: string) {
+  constructor(gl: WebGL2RenderingContext, source?: string) {
     this.gl = gl;
     this.glTexture = gl.createTexture();
 
